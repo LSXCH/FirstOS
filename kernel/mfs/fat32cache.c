@@ -3,6 +3,8 @@
 
 #include <zjunix/mfs/fat32cache.h>
 
+#include "utils.h"
+
 struct D_cache *dcache;
 struct P_cache *pcache;
 
@@ -135,7 +137,11 @@ void pcache_drop(struct P_cache *pcache) {
         crt_page = list_entry(victim, struct mem_page, p_LRU);
         list_del(victim);
         list_del(&(crt_page->p_hashlist));
+
+        if (crt_page->state == PAGE_DIRTY)
+            write_sector(crt_page->p_data, crt_page->abs_sector_num, 1);
         kfree(crt_page->p_data);
+        kfree(crt_page);
         pcache->crt_size--;
     }
 }

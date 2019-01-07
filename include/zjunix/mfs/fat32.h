@@ -133,11 +133,14 @@ struct mem_dentry {
     struct list_head d_LRU;
 };
 
+
+#define PAGE_CLEAN 0
+#define PAGE_DIRTY 1
 struct mem_page {
 
     u8 *p_data;
     u8 state;
-    u32 abs_sector_num;
+    u32 data_cluster_num;
     struct list_head p_hashlist;
     struct list_head p_LRU;
 };
