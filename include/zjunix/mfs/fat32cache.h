@@ -26,8 +26,11 @@ struct P_cache {
 };
 
 u32 init_cache();
+
+struct mem_dentry * get_dentry(u32 sector_num, u32 offset);
+struct mem_page * get_page(u32 relative_cluster_num);
 struct mem_dentry * dcache_lookup(struct D_cache *dcache, u32 sector_num, u32 offset);
-struct mem_page * pcache_lookup(struct P_cache *pcache, u32 sector_num);
+struct mem_page * pcache_lookup(struct P_cache *pcache, u32 relative_cluster_num);
 void dcache_add(struct D_cache *dcache, struct mem_dentry *data);
 void pcache_add(struct P_cache *pcache, struct mem_page* data);
 void dcache_drop(struct D_cache *dcache);

@@ -4,6 +4,7 @@
 
 #include <zjunix/mfs/fat32cache.h>
 #include <zjunix/mfs/fat32.h>
+#include <zjunix/mfs/debug.h>
 
 #include "utils.h"
 
@@ -77,7 +78,8 @@ u32 load_root_dentries() {
 
     struct mem_dentry *root_dentry;
     u8 *crt_buffer = (u8 *)kmalloc (SECTOR_SIZE * sizeof(u8));
-    read_sector(crt_buffer, total_info.data_start_sector, 1);
+    /* TO DO: use pcache to get the dentry of the root */
+    // read_sector(crt_buffer, total_info.data_start_sector, 1);
 
     root_dentry->path_name[0] = '/';
     root_dentry->path_name[1] = 0;
@@ -87,4 +89,16 @@ u32 load_root_dentries() {
     root_dentry->sector_dentry_offset = 0;
     
     dcache_add(dcache, root_dentry);
+}
+
+u32 fat32_find(FILE *file) {
+    u8 *path = file->path;
+    u8 disk_str_name[11], disk_str_ext[3];
+
+    if (path[0] != '/') {
+        return 1;
+    }
+
+
+
 }

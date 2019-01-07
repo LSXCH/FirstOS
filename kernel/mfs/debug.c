@@ -1,5 +1,5 @@
 #include <zjunix/mfs/debug.h>
-
+#include <zjunix/mfs/
 #ifdef FS_DEBUG
 
 #include <driver/vgs.h>
@@ -14,6 +14,11 @@ void dump_fat_info(struct Total_FAT_Info *total_info) {
     kernel_printf("Data sectors count: %x\n", total_info->data_sectors_cnt);
     kernel_printf("Sectors per FAT: %x\n", total_info->sectors_per_FAT);
     kernel_printf("Data start sector: %x\n", total_info->data_start_sector);
+}
+
+void dump_page_info(struct mem_page *page) {
+    kernel_printf("This page is dirty ? %d\n", page->state);
+    kernel_printf("The cluster number in data field is %d\n", page->data_cluster_num);
 }
 
 #endif

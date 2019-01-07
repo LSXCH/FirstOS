@@ -2,11 +2,14 @@
 #include <zjunix/slab.h>
 
 #include <zjunix/mfs/fat32cache.h>
+#include <zjunix/mfs/debug.h>
 
 #include "utils.h"
 
 struct D_cache *dcache;
 struct P_cache *pcache;
+
+extern struct Total_FAT_Info total_info;
 
 u32 init_cache() {
     dcache = (struct D_cache*) kmalloc(sizeof(struct D_cache));
@@ -28,6 +31,33 @@ u32 init_cache() {
         INIT_LIST_HEAD(dcache->c_hashtable+i);
         INIT_LIST_HEAD(pcache->c_hashtable+i);
     }
+}
+
+
+struct mem_dentry * get_dentry(u32 sector_num, u32 offset) {
+    struct mem_dentry * result = dcache_lookup(dcache, sector_num, offset);
+    if (result == 0) {
+        result = (struct mem_dentry *) kmalloc(sizeof(struct mem_dentry));
+        result->is_root = 0;
+    } else {
+        return result;
+    }
+}
+struct mem_page * get_page(u32 relative_cluster_num) {
+    struct mem_page * result = pcache_lookup(pcache, relative_cluster_num);
+
+    if (result == 0) {
+        result = (struct mem_page *) kmalloc(sizeof(struct mem_page));
+        result->state = PAGE_CLEAN;
+        result->data_cluster_num = relative_cluster_num;
+        result->p_data = (u8 *) kmalloc(CLUSTER_SIZE);
+        read_page(total_info.data_start_sector, crt_page);
+        pcache_add(pcache, result);
+#ifdef FSDEBUG
+        dump_page_info(result);
+#endif
+    }
+    return result;
 }
 
 struct mem_dentry * dcache_lookup(struct D_cache *dcache, u32 sector_num, u32 offset) {
@@ -56,18 +86,18 @@ struct mem_dentry * dcache_lookup(struct D_cache *dcache, u32 sector_num, u32 of
     }
 }
 
-struct mem_page * pcache_lookup(struct P_cache *pcache, u32 sector_num) {
+struct mem_page * pcache_lookup(struct P_cache *pcache, u32 relative_cluster_num) {
     struct list_head *table_head;
     struct list_head *crt_node;
     struct mem_page *crt_page;
     
-    u32 hash = __intHash(sector_num, C_TABLESIZE);
+    u32 hash = __intHash(relative_cluster_num, C_TABLESIZE);
 
     table_head = &(pcache->c_hashtable[hash]);
 
     list_for_each(crt_node, table_head) {
         crt_page = list_entry(crt_node, struct mem_page, p_hashlist);
-        if (crt_page->abs_sector_num == sector_num) {
+        if (crt_page->data_cluster_num == relative_cluster_num) {
             break;
         }
     }
@@ -96,7 +126,7 @@ void dcache_add(struct D_cache *dcache, struct mem_dentry *data) {
 }
 
 void pcache_add(struct P_cache *pcache, struct mem_page *data) {
-    u32 hash = __intHash(data->abs_sector_num, C_TABLESIZE);
+    u32 hash = __intHash(data->data_cluster_num, C_TABLESIZE);
 
     if (pcache->crt_size == pcache->max_capacity) {
         pcache_drop(pcache);
@@ -138,8 +168,9 @@ void pcache_drop(struct P_cache *pcache) {
         list_del(victim);
         list_del(&(crt_page->p_hashlist));
 
-        if (crt_page->state == PAGE_DIRTY)
-            write_sector(crt_page->p_data, crt_page->abs_sector_num, 1);
+        if (crt_page->state == PAGE_DIRTY) {
+            write_page(total_info.data_start_sector, crt_page);
+        }
         kfree(crt_page->p_data);
         kfree(crt_page);
         pcache->crt_size--;

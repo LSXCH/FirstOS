@@ -3,7 +3,6 @@
 #include <zjunix/type.h>
 #include <zjunix/list.h>
 
-#include <zjunix/mfs/debug.h>
 
 #include "errno.h"
 
@@ -50,9 +49,9 @@ typedef struct fat_file_s {
     u8 path[256];
     // The current file pointer
     u32 crt_pointer_position;
-    // The sector number of the directory entry on disk
+    // The ablolute sector number of the directory entry on disk
     u32 disk_dentry_sector_num;
-    u32 disk_dentry_num_in;
+    u32 disk_dentry_num_offset;
 } FILE;
 
 struct __attribute__((__packed__)) BPB_attr {
@@ -140,6 +139,7 @@ struct mem_page {
 
     u8 *p_data;
     u8 state;
+    // relative sector number to the start address of data field
     u32 data_cluster_num;
     struct list_head p_hashlist;
     struct list_head p_LRU;
@@ -148,5 +148,7 @@ struct mem_page {
 u32 init_fat32();
 u32 init_total_info();
 u32 load_root_dentries();
+u32 fat32_find(FILE *file);
+u32 fat32_open(FILE *file, u8 *file_name);
 
 #endif
