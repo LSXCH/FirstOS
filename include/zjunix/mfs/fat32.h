@@ -137,7 +137,7 @@ struct mem_page {
 
     u8 *p_data;
     u8 state;
-    u32 p_block_number;
+    u32 abs_sector_num;
     struct list_head p_hashlist;
     struct list_head p_LRU;
 };
