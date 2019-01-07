@@ -93,15 +93,15 @@ void dcache_add(struct D_cache *dcache, struct mem_dentry *data) {
     dcache->crt_size++;
 }
 
-void pcache_add(sruct P_cache *pcache, struct mem_page *data) {
+void pcache_add(struct P_cache *pcache, struct mem_page *data) {
     u32 hash = __intHash(data->abs_sector_num, C_TABLESIZE);
 
     if (pcache->crt_size == pcache->max_capacity) {
-        pcache_drop(pcache)
+        pcache_drop(pcache);
     }
 
     list_add(&(data->p_hashlist), pcache->c_hashtable+hash);
-    list_add(&(data->p_LRU), &(pcache->p_LRU));
+    list_add(&(data->p_LRU), &(pcache->c_LRU));
 
     pcache->crt_size++;
 }
