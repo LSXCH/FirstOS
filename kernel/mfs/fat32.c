@@ -10,8 +10,11 @@
 
 extern struct D_cache *dcache;
 extern struct P_cache *pcache;
+extern struct T_cache *tcache;
 
 struct Total_FAT_Info total_info;
+struct mem_dentry * pwd_dentry;
+struct mem_dentry * root_dentry;
 
 u32 init_fat32(u32 base)
 {
@@ -76,28 +79,40 @@ u32 init_total_info() {
 
 u32 load_root_dentries() {
 
-    struct mem_dentry *root_dentry;
-    u8 *crt_buffer = (u8 *)kmalloc (SECTOR_SIZE * sizeof(u8));
-    /* TO DO: use pcache to get the dentry of the root */
-    // read_sector(crt_buffer, total_info.data_start_sector, 1);
+    struct mem_page *crt_page = get_page(0);
+    pwd_dentry = (struct mem_dentry *) kmalloc(sizeof(struct mem_dentry));
+    root_dentry = pwd_dentry;
 
-    root_dentry->name[0] = 0;
-    root_dentry->is_root = 1;
-    kernel_memcpy(root_dentry->dentry_data.data, crt_buffer, 32);
-    root_dentry->abs_sector_num = total_info.data_start_sector;
-    root_dentry->sector_dentry_offset = 0;
+
+    pwd_dentry->name[0] = 0;
+    pwd_dentry->spinned = 1;
+    kernel_memcpy(pwd_dentry->dentry_data.data, crt_page->p_data, 32);
+    pwd_dentry->abs_sector_num = total_info.data_start_sector;
+    pwd_dentry->sector_dentry_offset = 0;
     
-    dcache_add(dcache, root_dentry);
+    dcache_add(dcache, pwd_dentry);
 }
 
 u32 fat32_find(FILE *file) {
     u8 *path = file->path;
-    u8 disk_str_name[11], disk_str_ext[3];
+    u8 disk_name_str[11];
 
     int slash_traverser = 1;
     if (path[0] != '/') {
         return 1;
     }
+    struct mem_dentry *crt_directory = root_dentry;
+    u32 slash_offset = fs_cut_slash(path+slash_traverser, disk_name_str);
 
-    
+    while ( slash_offset != 0 && slash_offset != 0xFFFFFFFF ) {
+        
+        for (int i = 0; i < DENTRY_PER_SEC; i++) {
+            
+        }
+    }
+
+    if (slash_offset == 0)      // Success
+        return 0;
+    else                        // Fail
+        return 1;
 }

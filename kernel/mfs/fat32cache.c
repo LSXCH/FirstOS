@@ -8,28 +8,33 @@
 
 struct D_cache *dcache;
 struct P_cache *pcache;
+struct T_cache *tcache;
 
 extern struct Total_FAT_Info total_info;
 
 u32 init_cache() {
     dcache = (struct D_cache*) kmalloc(sizeof(struct D_cache));
     pcache = (struct P_cache*) kmalloc(sizeof(struct P_cache));
+    tcache = (struct T_cache*) kmalloc(sizeof(struct T_cache));
 
-    if (dcache == 0 || pcache == 0) {
+    if (dcache == 0 || pcache == 0 || tcache == 0) {
         log(LOG_FAIL, "Cache init memory allocation fail!");
         return COMMON_ERR;
     }
 
-    dcache->crt_size = pcache->crt_size = 0;
-    dcache->max_capacity = pcache->max_capacity = C_CAPACITY;
+    dcache->crt_size = pcache->crt_size = tcache->crt_size = 0;
+    dcache->max_capacity = pcache->max_capacity = tcache->max_capacity = C_CAPACITY;
     INIT_LIST_HEAD(&(dcache->c_LRU));
     INIT_LIST_HEAD(&(pcache->c_LRU));
+    INIT_LIST_HEAD(&(tcache->c_LRU));
     dcache->c_hashtable = (struct list_head*) kmalloc(C_TABLESIZE * sizeof(struct list_head));
     pcache->c_hashtable = (struct list_head*) kmalloc(C_TABLESIZE * sizeof(struct list_head));
+    tcache->c_hashtable = (struct list_head*) kmalloc(C_TABLESIZE * sizeof(struct list_head));
     
     for (int i = 0; i < C_TABLESIZE; i++) {
         INIT_LIST_HEAD(dcache->c_hashtable+i);
         INIT_LIST_HEAD(pcache->c_hashtable+i);
+        INIT_LIST_HEAD(tcache->c_hashtable+i);
     }
 }
 
@@ -39,7 +44,7 @@ struct mem_dentry * get_dentry(u32 sector_num, u32 offset) {
     struct mem_dentry * result = dcache_lookup(dcache, sector_num, offset);
     if (result == 0) {
         result = (struct mem_dentry *) kmalloc(sizeof(struct mem_dentry));
-        result->is_root = 0;
+        result->spinned = 0;
         result->abs_sector_num = sector_num;
         result->sector_dentry_offset = offset;
         u32 page_cluster_num = (sector_num - total_info.data_start_sector) / SEC_PER_CLU;
@@ -68,6 +73,22 @@ struct mem_page * get_page(u32 relative_cluster_num) {
     return result;
 }
 
+struct mem_FATbuffer *get_FATBuf(u32 FAT_num, u32 sec_num) {
+    struct mem_FATbuffer * result = tcache_lookup(tcache, FAT_num, sec_num);
+
+    if (result == 0) {
+        result = (struct mem_FATbuffer *) kmalloc(sizeof(struct mem_FATbuffer));
+        result->state = PAGE_CLEAN;
+        result->fat_num = FAT_num;
+        result->sector_num_in_FAT = sec_num;
+        result->t_data = (u8 *) kmalloc(SECTOR_SIZE);
+        read_FAT_buf(&total_info, result);
+        tcache_add(tcache, result);
+    }
+    
+    return result;
+}
+
 struct mem_dentry * dcache_lookup(struct D_cache *dcache, u32 sector_num, u32 offset) {
     struct list_head *table_head;
     struct list_head *crt_node;
@@ -75,7 +96,7 @@ struct mem_dentry * dcache_lookup(struct D_cache *dcache, u32 sector_num, u32 of
 
     u32 hash = __intHash(sector_num * DENTRY_PER_SEC + offset, C_TABLESIZE);
 
-    table_head = &(dcache->c_hashtable[hash]);
+    table_head = dcache->c_hashtable + hash;
 
     list_for_each(crt_node, table_head) {
         crt_entry = list_entry(crt_node, struct mem_dentry, d_hashlist);
@@ -101,7 +122,7 @@ struct mem_page * pcache_lookup(struct P_cache *pcache, u32 relative_cluster_num
     
     u32 hash = __intHash(relative_cluster_num, C_TABLESIZE);
 
-    table_head = &(pcache->c_hashtable[hash]);
+    table_head = pcache->c_hashtable + hash;
 
     list_for_each(crt_node, table_head) {
         crt_page = list_entry(crt_node, struct mem_page, p_hashlist);
@@ -115,6 +136,32 @@ struct mem_page * pcache_lookup(struct P_cache *pcache, u32 relative_cluster_num
         list_del(&(crt_page->p_LRU));
         list_add(&(crt_page->p_LRU), &(pcache->c_LRU));
         return crt_page;
+    } else {
+        return 0;
+    }
+}
+
+struct mem_FATbuffer * tcache_lookup(struct T_cache *tcache, u32 FAT_num, u32 sec_num) {
+    struct list_head *table_head;
+    struct list_head *crt_node;
+    struct mem_FATbuffer *crt_buf;
+
+    u32 hash = __intHash(sec_num, C_TABLESIZE);
+
+    table_head = tcache->c_hashtable+hash;
+
+    list_for_each(crt_node, table_head) {
+        crt_buf = list_entry(crt_node, struct mem_FATbuffer, t_hashlist);
+        if (crt_buf->fat_num == FAT_num && crt_buf->sec_num_in_FAT == sec_num) {
+            break;
+        }
+    }
+
+    // Update LRU list
+    if (crt_node != table_head) {
+        list_del(&(crt_buf->t_LRU));
+        list_add(&(crt_buf->t_LRU), &(tcache->c_LRU));
+        return crt_buf;
     } else {
         return 0;
     }
@@ -146,6 +193,17 @@ void pcache_add(struct P_cache *pcache, struct mem_page *data) {
     pcache->crt_size++;
 }
 
+void tcache_add(struct T_cache *tcache, struct mem_FATbuffer *data) {
+    u32 hash = __intHash(data->sec_num_in_FAT, C_TABLESIZE);
+
+    if (tcache->crt_size == tcache->max_capacity) {
+        tcache_drop(tcache);
+    }
+
+    list_add(&(data->t_hashlist), tcache->c_hashtable+hash);
+    list_add(&(data->t_LRU), &(tcache->c_LRU));
+}
+
 void dcache_drop(struct D_cache *dcache) {
     struct list_head *LRU_head = &(dcache->c_LRU);
     struct list_head *victim = LRU_head->prev;
@@ -154,7 +212,7 @@ void dcache_drop(struct D_cache *dcache) {
     if (dcache->crt_size == 0 || dcache->crt_size == 1) return;
     else {
         crt_entry = list_entry(victim, struct mem_dentry, d_LRU);
-        if (crt_entry->is_root == 1) {
+        if (crt_entry->spinned != 0) {
             victim = victim->prev;
             crt_entry = list_entry(victim, struct mem_dentry, d_LRU);
         }
@@ -182,6 +240,26 @@ void pcache_drop(struct P_cache *pcache) {
         kfree(crt_page->p_data);
         kfree(crt_page);
         pcache->crt_size--;
+    }
+}
+
+void tcache_drop(struct T_cache *tcache) {
+    struct list_head *LRU_head = &(tcache->c_LRU);
+    struct list_head *victim = LRU_head->prev;
+    struct mem_FATbuffer *crt_buf;
+
+    if (tcache->crt_size == 0) return;
+    else {
+        crt_buf = list_entry(victim, struct mem_FATbuffer, t_LRU);
+        list_del(victim);
+        list_del(&(crt_buf->t_hashlist));
+
+        if (crt_buf->state == PAGE_DIRTY) {
+            write_FAT_buf(&total_info, crt_buf);
+        }
+        kfree(crt_buf->t_data);
+        kfree(crt_buf);
+        tcache->crt_size--;
     }
 }
 

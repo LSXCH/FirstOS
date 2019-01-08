@@ -125,7 +125,7 @@ struct Total_FAT_Info {
 };
 
 struct mem_dentry {
-    u8 is_root;
+    u8 spinned;
     u8 name[256];
     // Not totally absolute. It's the offset to the base address
     u32 abs_sector_num;
@@ -146,6 +146,17 @@ struct mem_page {
     u32 data_cluster_num;
     struct list_head p_hashlist;
     struct list_head p_LRU;
+};
+
+struct mem_FATbuffer {
+    u8 *t_data;
+    u8 state;
+    // The first or the second FAT
+    u32 fat_num;
+    // The sector number to the address of current FAT
+    u32 sec_num_in_FAT;
+    struct list_head t_hashlist;
+    struct list_head t_LRU;
 };
 
 u32 init_fat32();

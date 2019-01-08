@@ -25,16 +25,28 @@ struct P_cache {
     struct list_head *c_hashtable;
 };
 
+struct T_cache {
+    u32 max_capacity;
+    u32 crt_size;
+    u32 table_size;
+    struct list_head c_LRU;
+    struct list_head *c_hashtable;
+};
+
 u32 init_cache();
 
 struct mem_dentry * get_dentry(u32 sector_num, u32 offset);
 struct mem_page * get_page(u32 relative_cluster_num);
+struct mem_FATbuffer *get_FATBuf(u32 FAT_num, u32 sec_num);
 struct mem_dentry * dcache_lookup(struct D_cache *dcache, u32 sector_num, u32 offset);
 struct mem_page * pcache_lookup(struct P_cache *pcache, u32 relative_cluster_num);
+struct mem_FATbuffer * tcache_lookup(struct T_cache *tcache, u32 FAT_num, u32 sec_num);
 void dcache_add(struct D_cache *dcache, struct mem_dentry *data);
 void pcache_add(struct P_cache *pcache, struct mem_page* data);
+void tcache_add(struct T_cache *tcache, struct mem_FATbuffer *data);
 void dcache_drop(struct D_cache *dcache);
 void pcache_drop(struct P_cache *pcache);
+void tcache_drop(struct T_cache *tcache);
 
 u32 __intHash(u32 key, u32 size);
 
