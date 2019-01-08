@@ -10,6 +10,7 @@
 #define CLUSTER_SIZE 4096
 #define SEC_PER_CLU 8
 #define DENTRY_PER_SEC 16
+#define DENTRY_SIZE 32
 
 struct __attribute__((__packed__)) disk_short_dentry_addr {
     u8 name[8];                   /* Name */
@@ -117,6 +118,7 @@ struct Total_FAT_Info {
     u32 reserved_sectors_cnt;
     u32 data_sectors_cnt;
     u32 sectors_per_FAT;
+    // Relative to base_addr
     u32 data_start_sector;
     union BPB_Info bpb_info;
     union FSI_Info fsi_info;
@@ -124,7 +126,8 @@ struct Total_FAT_Info {
 
 struct mem_dentry {
     u8 is_root;
-    u8 path_name[256];
+    u8 name[256];
+    // Not totally absolute. It's the offset to the base address
     u32 abs_sector_num;
     u32 sector_dentry_offset;
     union disk_dentry dentry_data;
@@ -139,7 +142,7 @@ struct mem_page {
 
     u8 *p_data;
     u8 state;
-    // relative sector number to the start address of data field
+    // relative cluster number to the start address of data field
     u32 data_cluster_num;
     struct list_head p_hashlist;
     struct list_head p_LRU;

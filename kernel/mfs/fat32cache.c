@@ -34,15 +34,23 @@ u32 init_cache() {
 }
 
 
+// Return the mem_dentry struct with no path name
 struct mem_dentry * get_dentry(u32 sector_num, u32 offset) {
     struct mem_dentry * result = dcache_lookup(dcache, sector_num, offset);
     if (result == 0) {
         result = (struct mem_dentry *) kmalloc(sizeof(struct mem_dentry));
         result->is_root = 0;
+        result->abs_sector_num = sector_num;
+        result->sector_dentry_offset = offset;
+        u32 page_cluster_num = (sector_num - total_info.data_start_sector) / SEC_PER_CLU;
+        struct mem_page * location_page = get_page(page_cluster_num);
+        kernel_memcpy(result->dentry_data.data, location_page->p_data + offset * DENTRY_SIZE, DENTRY_SIZE);
+        pcache_add(pcache, result);
     } else {
         return result;
     }
 }
+
 struct mem_page * get_page(u32 relative_cluster_num) {
     struct mem_page * result = pcache_lookup(pcache, relative_cluster_num);
 
@@ -51,7 +59,7 @@ struct mem_page * get_page(u32 relative_cluster_num) {
         result->state = PAGE_CLEAN;
         result->data_cluster_num = relative_cluster_num;
         result->p_data = (u8 *) kmalloc(CLUSTER_SIZE);
-        read_page(total_info.data_start_sector, crt_page);
+        read_page(&total_info, result);
         pcache_add(pcache, result);
 #ifdef FSDEBUG
         dump_page_info(result);

@@ -81,8 +81,7 @@ u32 load_root_dentries() {
     /* TO DO: use pcache to get the dentry of the root */
     // read_sector(crt_buffer, total_info.data_start_sector, 1);
 
-    root_dentry->path_name[0] = '/';
-    root_dentry->path_name[1] = 0;
+    root_dentry->name[0] = 0;
     root_dentry->is_root = 1;
     kernel_memcpy(root_dentry->dentry_data.data, crt_buffer, 32);
     root_dentry->abs_sector_num = total_info.data_start_sector;
@@ -95,10 +94,10 @@ u32 fat32_find(FILE *file) {
     u8 *path = file->path;
     u8 disk_str_name[11], disk_str_ext[3];
 
+    int slash_traverser = 1;
     if (path[0] != '/') {
         return 1;
     }
 
-
-
+    
 }
