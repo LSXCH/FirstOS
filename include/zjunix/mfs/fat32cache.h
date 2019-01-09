@@ -10,12 +10,12 @@
 #define C_TABLESIZE 32
 
 #define update_dentry(__sec_num, __offset, __attr, __val) { \
-    struct mem_dentry * tmp_dentry = get_dentry(dcache, __sec_num, __offset); \
+    struct mem_dentry * tmp_dentry = get_dentry(__sec_num, __offset); \
     u32 page_cluster_num = (__sec_num - total_info.data_start_sector) / SEC_PER_CLU; \
     struct mem_page * tmp_page = get_page(page_cluster_num); \
     \
     tmp_dentry->dentry_data.short_attr.__attr = __val; \
-    union disk_dentry *attributes = tmp_page->p_data + __offset * DENTRY_SIZE; \
+    union disk_dentry *attributes = (union disk_dentry *)tmp_page->p_data + __offset * DENTRY_SIZE; \
     attributes->short_attr.__attr = __val; \
     tmp_page->state = PAGE_DIRTY; \
 }
@@ -59,6 +59,10 @@ void tcache_add(struct T_cache *tcache, struct mem_FATbuffer *data);
 void dcache_drop(struct D_cache *dcache);
 void pcache_drop(struct P_cache *pcache);
 void tcache_drop(struct T_cache *tcache);
+
+u32 update_FAT(u32 crt_clus, u32 next_clus);
+
+void fat32_fflush();
 
 u32 __intHash(u32 key, u32 size);
 

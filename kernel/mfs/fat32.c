@@ -247,7 +247,14 @@ u32 fat32_write(MY_FILE *file, const u8 *buf, u32 count) {
 
     // This file has no data before
     if (crt_clus == 0) {
-        
+        if (get_free_clu(&crt_clus) != 0)
+            return 1;
+        // Update FAT and dentry
+        u32 sec_num = file->disk_dentry_sector_num, offset = file->disk_dentry_num_offset;
+        u16 low = crt_clus & 0x0000FFFF, high = crt_clus >> 16;
+        update_dentry(sec_num, offset, startlow, low);
+        update_dentry(sec_num, offset, starthi, high);
+        update_FAT(crt_clus, 0x0FFFFFFF);
     }
 
     if (file->crt_pointer_position + count > filesize)
@@ -256,36 +263,65 @@ u32 fat32_write(MY_FILE *file, const u8 *buf, u32 count) {
     u32 start_byte_num = file->crt_pointer_position % CLUSTER_SIZE;
     u32 end_clus_num = (file->crt_pointer_position + count) / CLUSTER_SIZE;
     u32 end_byte_num = (file->crt_pointer_position + count) % CLUSTER_SIZE;
+    u32 origin_end_clu = filesize / CLUSTER_SIZE;
+    u32 origin_end_byte = filesize % CLUSTER_SIZE;
 
     u32 clus_index = 0;
     u32 _start, _end;
     u32 buf_index = 0;
+
+    // Traverse until the write task is finished
+    // I did make sure it does have the first cluster
     while (clus_index <= end_clus_num) {
-        // If it is the first cluster
-        if (clus_index == start_clus_num) {
-            _start = start_byte_num;
-        // If it is not the first cluster, then start from 0
-        } else if (clus_index > start_clus_num){
-            _start = 0;
-        }
-        // If it is the last cluster
-        if (clus_index == end_clus_num) {
-            _end = end_byte_num;
-        // If it is not the last cluster, then end with 4096
-        } else if (clus_index < end_clus_num) {
-            _end = CLUSTER_SIZE;
-        }
 
-        // If it is one of the right cluster, copy it 
+        // If it exceeds orgin field
+        // Set 0 for the total cluster
+        if (clus_index > origin_end_clu) {
+            struct mem_page *crt_page =  get_page(crt_clus-2);
+            kernel_memset(crt_page->p_data, 0, CLUSTER_SIZE);
+            crt_page->state = PAGE_DIRTY;
+        }
         if (clus_index >= start_clus_num && clus_index <= end_clus_num) {
-            // If it has no data before
-            if (crt_clus == 0x0FFFFFFF) {
-
-            }
+            // Get start and end byte num
+            if (clus_index == start_clus_num) 
+                _start = start_clus_num;
+            else 
+                _start = 0;
+            if (clus_index == end_clus_num)
+                _end = end_clus_num;
+            else
+                _end = CLUSTER_SIZE;
+            
+            struct mem_page *crt_page =  get_page(crt_clus-2);
+            kernel_memcpy(crt_page->p_data+_start, (void*)buf + buf_index, _end-_start);
+            crt_page->state = PAGE_DIRTY;
+            buf_index += _end - _start;
         }
         // Get the next cluster num in data field
-        crt_clus = get_next_clu_num(crt_clus);
+        u32 next_clus;
+        next_clus = get_next_clu_num(crt_clus);
         clus_index++;
+        
+        // If it exceeds origin field
+        if (next_clus == 0x0FFFFFFF && clus_index <= end_clus_num) {
+            if (get_free_clu(&next_clus) != 0)
+                return 1;
+            // Update FAT
+            update_FAT(crt_clus, next_clus);
+            update_FAT(next_clus, 0x0FFFFFFF);
+        }
     }
+
+    // Update file size
+    if (file->crt_pointer_position + count > filesize) {
+        u32 sec_num = file->disk_dentry_sector_num, offset = file->disk_dentry_num_offset;
+        u16 new_size = file->crt_pointer_position + count;
+        update_dentry(sec_num, offset, size, new_size);
+    }
+
+    return buf_index;
 }
 
+u32 fat32_close(MY_FILE *file) {
+    fat32_fflush();
+}

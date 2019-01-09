@@ -8,6 +8,11 @@
 #include "utils.h"
 
 u32 fat32_cat(u8 *path) {
+#ifdef FS_DEBUG
+    kernel_printf("In my cat function.\n");
+#endif
+
+
     u8 filename[12];
     MY_FILE cat_file;
 

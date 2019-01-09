@@ -5,6 +5,7 @@
 #include <zjunix/mfs/debug.h>
 
 #include "utils.h"
+#include "../fs/fat/utils.h"
 
 struct D_cache *dcache;
 struct P_cache *pcache;
@@ -263,6 +264,30 @@ void tcache_drop(struct T_cache *tcache) {
         tcache->crt_size--;
     }
 }
+
+u32 update_FAT(u32 crt_clus, u32 next_clus) {
+    struct mem_FATbuffer *crtBuffer = get_FATBuf(1, crt_clus * 4 / SECTOR_SIZE);
+    set_u32(crtBuffer->t_data + crt_clus * 4, next_clus);
+    crtBuffer->state = PAGE_DIRTY;
+    crtBuffer = get_FATBuf(2, crt_clus * 4 / SECTOR_SIZE);
+    set_u32(crtBuffer->t_data + crt_clus * 4, next_clus);
+    crtBuffer->state = PAGE_DIRTY;
+    
+    return 0;
+}
+
+void fat32_fflush() {
+    for (int i = 0; i < dcache->crt_size; i++) {
+        dcache_drop(dcache);
+    }
+    for (int i = 0; i < pcache->crt_size; i++) {
+        pcache_drop(pcache);
+    }
+    for (int i = 0; i < tcache->crt_size; i++) {
+        tcache_drop(tcache);
+    }
+}
+
 
 u32 __intHash(u32 key, u32 size) {
     u32 mask = size - 1;
