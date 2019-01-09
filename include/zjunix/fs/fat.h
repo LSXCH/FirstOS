@@ -46,7 +46,7 @@ typedef struct fat_file {
     unsigned long clock_head;
     /* For normal FAT32, cluster size is 4k */
     BUF_4K data_buf[LOCAL_DATA_BUF_NUM];
-} FILE_;
+} FILE;
 
 typedef struct fs_fat_dir {
     unsigned long cur_sector;
@@ -54,7 +54,7 @@ typedef struct fs_fat_dir {
     unsigned long sec;
 } FS_FAT_DIR;
 
-struct __attribute__((__packed__)) BPB_attr_ {
+struct __attribute__((__packed__)) BPB_attr {
     // 0x00 ~ 0x0f
     u8 jump_code[3];
     u8 oem_name[8];

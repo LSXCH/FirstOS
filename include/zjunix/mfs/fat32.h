@@ -55,7 +55,7 @@ typedef struct fat_file_s {
     u32 disk_dentry_num_offset;
 } MY_FILE;
 
-struct __attribute__((__packed__)) BPB_attr {
+struct __attribute__((__packed__)) BPB_attr_ {
     // 0x00 ~ 0x0f
     u8 jump_code[3];
     u8 oem_name[8];
@@ -95,7 +95,7 @@ struct __attribute__((__packed__)) BPB_attr {
 
 union BPB_Info {
     u8 data[SECTOR_SIZE];
-    struct BPB_attr attr;
+    struct BPB_attr_ attr;
 };
 
 struct __attribute__((__packed__)) FSI_attr {
