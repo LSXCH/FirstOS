@@ -93,7 +93,7 @@ u32 load_root_dentries() {
     dcache_add(dcache, pwd_dentry);
 }
 
-u32 fat32_find(FILE *file) {
+u32 fat32_find(MY_FILE *file) {
     u8 *path = file->path;
     u8 disk_name_str[11];
 
@@ -154,7 +154,7 @@ u32 fat32_find(FILE *file) {
     return 0;
 }
 
-u32 fat32_open(FILE *file, u8 *filename) {
+u32 fat32_open(MY_FILE *file, u8 *filename) {
     u32 i, j;
 
     kernel_memset(file->path, 0, 256);
@@ -189,7 +189,7 @@ u32 fat32_open(FILE *file, u8 *filename) {
 }
 
 
-u32 fat32_read(FILE *file, u8 *buf, u32 count) {
+u32 fat32_read(MY_FILE *file, u8 *buf, u32 count) {
     // The clus in data field
     // root -> 2
     u32 crt_clus = get_start_cluster(file);
@@ -235,7 +235,7 @@ u32 fat32_read(FILE *file, u8 *buf, u32 count) {
     file->crt_pointer_position += count;
 }
 
-u32 fs_write(FILE *file, const u8 *buf, u32 count) {
+u32 fs_write(MY_FILE *file, const u8 *buf, u32 count) {
     if (count == 0)
         return 0;
     

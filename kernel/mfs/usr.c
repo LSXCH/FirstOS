@@ -8,7 +8,7 @@
 
 u32 fat32_cat(u8 *path) {
     u8 filename[12];
-    FILE cat_file;
+    MY_FILE cat_file;
 
     /* Open */
     if (0 != fs_open(&cat_file, path)) {

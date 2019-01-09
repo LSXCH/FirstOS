@@ -53,7 +53,7 @@ typedef struct fat_file_s {
     // The sector number of the directory entry on disk to base address
     u32 disk_dentry_sector_num;
     u32 disk_dentry_num_offset;
-} FILE;
+} MY_FILE;
 
 struct __attribute__((__packed__)) BPB_attr {
     // 0x00 ~ 0x0f
@@ -162,10 +162,10 @@ struct mem_FATbuffer {
 u32 init_fat32();
 u32 init_total_info();
 u32 load_root_dentries();
-u32 fat32_find(FILE *file);
-u32 fat32_open(FILE *file, u8 *file_name);
-u32 fat32_read(FILE *file, u8 *buf, u32 count);
-u32 fat32_close(FILE *file);
+u32 fat32_find(MY_FILE *file);
+u32 fat32_open(MY_FILE *file, u8 *file_name);
+u32 fat32_read(MY_FILE *file, u8 *buf, u32 count);
+u32 fat32_close(MY_FILE *file);
 u32 fat32_cat(u8 *path);
 
 #endif

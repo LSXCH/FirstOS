@@ -160,7 +160,7 @@ u32 get_next_clu_num(u32 crt_clu) {
 // Get the index of FAT
 // file:root
 // return 2
-u32 get_start_cluster(FILE *file) {
+u32 get_start_cluster(MY_FILE *file) {
     struct mem_dentry *crt_entry = get_dentry(file->disk_dentry_sector_num, file->disk_dentry_num_offset);
     return get_clu_by_dentry(crt_entry);
 }
@@ -168,7 +168,7 @@ u32 get_start_cluster(FILE *file) {
 // Input a FILE struct with disk_dentry_sector_num
 // and disk_dentry_num_offset initialized
 // Return the file size
-u32 get_file_size(FILE *file) {
+u32 get_file_size(MY_FILE *file) {
     struct mem_dentry *crt_entry = get_dentry(file->disk_dentry_sector_num, file->disk_dentry_num_offset);
     return crt_entry->dentry_data.short_attr.size;
 }
