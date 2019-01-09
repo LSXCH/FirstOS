@@ -287,3 +287,4 @@ u32 fs_write(FILE *file, const u8 *buf, u32 count) {
         clus_index++;
     }
 }
+

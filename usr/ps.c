@@ -8,6 +8,7 @@
 #include <zjunix/slab.h>
 #include <zjunix/time.h>
 #include <zjunix/utils.h>
+#include <zjunix/mfs/fat32.h>
 #include "../usr/ls.h"
 #include "exec.h"
 #include "myvi.h"
@@ -155,7 +156,7 @@ void parse_cmd() {
         result = proc_demo_create();
         kernel_printf("proc return with %d\n", result);
     } else if (kernel_strcmp(ps_buffer, "cat") == 0) {
-        result = fs_cat(param);
+        result = fat32_cat(param);
         kernel_printf("cat return with %d\n", result);
     } else if (kernel_strcmp(ps_buffer, "ls") == 0) {
         result = ls(param);

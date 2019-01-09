@@ -165,5 +165,7 @@ u32 load_root_dentries();
 u32 fat32_find(FILE *file);
 u32 fat32_open(FILE *file, u8 *file_name);
 u32 fat32_read(FILE *file, u8 *buf, u32 count);
+u32 fat32_close(FILE *file);
+u32 fat32_cat(u8 *path);
 
 #endif
