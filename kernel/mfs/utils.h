@@ -3,6 +3,7 @@
 
 #include <zjunix/mfs/fat32.h>
 #include <zjunix/mfs/debug.h>
+#include <zjunix/mfs/fat32cache.h>
 
 u32 read_sector(u8 *buf, u32 addr, u32 count);
 u32 write_sector(u8 *buf, u32 addr, u32 count);
@@ -23,5 +24,9 @@ u32 disk_name_cmp(u8 *a, u8 *b);
 // Operations about directory entry attribute
 u32 is_directory(struct mem_dentry *crt_dentry);
 u32 get_clu_by_dentry(struct mem_dentry *crt_dentry);
+u32 get_next_clu_num(u32 crt_clu);
+u32 get_start_cluster(FILE *file);
+u32 get_file_size(FILE *file);
+u32 get_free_clu(u32 *output);
 
 #endif

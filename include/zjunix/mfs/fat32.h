@@ -50,7 +50,7 @@ typedef struct fat_file_s {
     u8 path[256];
     // The current file pointer
     u32 crt_pointer_position;
-    // The ablolute sector number of the directory entry on disk
+    // The sector number of the directory entry on disk to base address
     u32 disk_dentry_sector_num;
     u32 disk_dentry_num_offset;
 } FILE;
@@ -164,5 +164,6 @@ u32 init_total_info();
 u32 load_root_dentries();
 u32 fat32_find(FILE *file);
 u32 fat32_open(FILE *file, u8 *file_name);
+u32 fat32_read(FILE *file, u8 *buf, u32 count);
 
 #endif

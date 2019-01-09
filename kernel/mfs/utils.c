@@ -2,6 +2,8 @@
 
 #include "utils.h"
 
+struct Total_FAT_Info total_info;
+
 /* Read/Write block for FAT (starts from first block of partition 1) */
 u32 read_sector(u8 *buf, u32 addr, u32 count) {
     return sd_read_block(buf, addr, count);
@@ -125,16 +127,62 @@ inline u32 is_directory(struct mem_dentry *crt_dentry) {
     u8 attr = crt_dentry->dentry_data.short_attr.attr;
     return (attr & 0x08) || (attr & 0x10);
 }
-// Get the cluster number in data field.
-// (Not in the block of FAT)
+
+// Get the index of FAT
+// For example: 0FFFFFF8 FFFFFFFF 0FFFFFFF 0FFFFFFF
+// data:   / : 00 00 return 2
+// data:   A : 03 00 return 3
 u32 get_clu_by_dentry(struct mem_dentry *crt_dentry) {
+    
+    // If it is the root directory
+    if (crt_dentry->dentry_data.short_attr.attr & 0x08)
+        return 2;
+
     u32 clu_num = (u32)(crt_dentry->dentry_data.short_attr.starthi) << 16 | crt_dentry->dentry_data.short_attr.startlow;
 #ifdef FS_DEBUG
-    u32 hi = get_u16(crt_dentry->dentry_data.short_attr.starthi);
-    u32 lo = get_u16(crt_dentry->dentry_data.short_attr.startlo);
+    u32 hi = get_u16(&crt_dentry->dentry_data.short_attr.starthi);
+    u32 lo = get_u16(&crt_dentry->dentry_data.short_attr.startlo);
     u32 debug = (u32)hi << 16 | lo;
     kernel_printf("FS_DEBUG   direct : %d, debug : %d\n", clu_num, debug);
 #endif
-    if (clu_num < 2) clu_num = 0;
-    else clu_num -= 2;
+    return clu_num;
+}
+
+// Input  : The index of FAT
+//          root -> 2
+// Output : The num in FAT block
+//          FAT[2] -> 3
+u32 get_next_clu_num(u32 crt_clu) {
+    struct mem_FATbuffer *crt_FAT = get_FATBuf(1, crt_clu / DENTRY_PER_SEC);
+    return get_u32(crt_FAT->t_data + crt_clu * 4) & 0x0FFFFFFF;
+}
+
+// Get the index of FAT
+// file:root
+// return 2
+u32 get_start_cluster(FILE *file) {
+    struct mem_dentry *crt_entry = get_dentry(file->disk_dentry_sector_num, file->disk_dentry_num_offset);
+    return get_clu_by_dentry(crt_entry);
+}
+
+// Input a FILE struct with disk_dentry_sector_num
+// and disk_dentry_num_offset initialized
+// Return the file size
+u32 get_file_size(FILE *file) {
+    struct mem_dentry *crt_entry = get_dentry(file->disk_dentry_sector_num, file->disk_dentry_num_offset);
+    return crt_entry->dentry_data.short_attr.size;
+}
+
+// Input the pointer to output
+// The free cluster num is saved in output
+// The cluster number in data field
+u32 get_free_clu(u32 *output) {
+    // Get the cluster which is allocated latestly
+    u32 start_clu = total_info.fsi_info.attr.next_free_cluster;
+    if (start_clu == 0xFFFFFFFF)
+        start_clu = 2;
+    
+    for (int i = start_clu; i < total_info.sectors_per_FAT * SECSIZE / 4; i++) {
+        if ()
+    }
 }

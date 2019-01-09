@@ -56,6 +56,7 @@ struct mem_dentry * get_dentry(u32 sector_num, u32 offset) {
     }
 }
 
+// Input the cluster to data field
 struct mem_page * get_page(u32 relative_cluster_num) {
     struct mem_page * result = pcache_lookup(pcache, relative_cluster_num);
 
@@ -80,7 +81,7 @@ struct mem_FATbuffer *get_FATBuf(u32 FAT_num, u32 sec_num) {
         result = (struct mem_FATbuffer *) kmalloc(sizeof(struct mem_FATbuffer));
         result->state = PAGE_CLEAN;
         result->fat_num = FAT_num;
-        result->sector_num_in_FAT = sec_num;
+        result->sec_num_in_FAT = sec_num;
         result->t_data = (u8 *) kmalloc(SECTOR_SIZE);
         read_FAT_buf(&total_info, result);
         tcache_add(tcache, result);
