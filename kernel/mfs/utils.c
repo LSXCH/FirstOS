@@ -1,6 +1,7 @@
 #include <driver/sd.h>
 
 #include "utils.h"
+#include "../fs/fat/utils.h"
 
 struct Total_FAT_Info total_info;
 
@@ -35,36 +36,36 @@ u32 write_FAT_buf(struct Total_FAT_Info * total_info, struct mem_FATbuffer* crt_
     return sd_write_block(crt_buf->t_data, sector_address, 1);
 }
 
-/* char to u16/u32 */
-u16 get_u16(u8 *ch) {
-    return (*ch) + ((*(ch + 1)) << 8);
-}
+// /* char to u16/u32 */
+// u16 get_u16(u8 *ch) {
+//     return (*ch) + ((*(ch + 1)) << 8);
+// }
 
-u32 get_u32(u8 *ch) {
-    return (*ch) + ((*(ch + 1)) << 8) + ((*(ch + 2)) << 16) + ((*(ch + 3)) << 24);
-}
+// u32 get_u32(u8 *ch) {
+//     return (*ch) + ((*(ch + 1)) << 8) + ((*(ch + 2)) << 16) + ((*(ch + 3)) << 24);
+// }
 
-/* u16/u32 to char */
-void set_u16(u8 *ch, u16 num) {
-    *ch = (u8)(num & 0xFF);
-    *(ch + 1) = (u8)((num >> 8) & 0xFF);
-}
+// /* u16/u32 to char */
+// void set_u16(u8 *ch, u16 num) {
+//     *ch = (u8)(num & 0xFF);
+//     *(ch + 1) = (u8)((num >> 8) & 0xFF);
+// }
 
-void set_u32(u8 *ch, u32 num) {
-    *ch = (u8)(num & 0xFF);
-    *(ch + 1) = (u8)((num >> 8) & 0xFF);
-    *(ch + 2) = (u8)((num >> 16) & 0xFF);
-    *(ch + 3) = (u8)((num >> 24) & 0xFF);
-}
+// void set_u32(u8 *ch, u32 num) {
+//     *ch = (u8)(num & 0xFF);
+//     *(ch + 1) = (u8)((num >> 8) & 0xFF);
+//     *(ch + 2) = (u8)((num >> 16) & 0xFF);
+//     *(ch + 3) = (u8)((num >> 24) & 0xFF);
+// }
 
-/* work around */
-u32 fs_wa(u32 num) {
-    // return the bits of `num`
-    u32 i;
-    for (i = 0; num > 1; num >>= 1, i++)
-        ;
-    return i;
-}
+// /* work around */
+// u32 fs_wa(u32 num) {
+//     // return the bits of `num`
+//     u32 i;
+//     for (i = 0; num > 1; num >>= 1, i++)
+//         ;
+//     return i;
+// }
 
 // Return the index of next slash or '\0'
 // and put the name in between to name_on_disk
@@ -160,7 +161,7 @@ u32 get_next_clu_num(u32 crt_clu) {
 // Get the index of FAT
 // file:root
 // return 2
-u32 get_start_cluster(MY_FILE *file) {
+u32 get_start_clu_num(MY_FILE *file) {
     struct mem_dentry *crt_entry = get_dentry(file->disk_dentry_sector_num, file->disk_dentry_num_offset);
     return get_clu_by_dentry(crt_entry);
 }
@@ -183,6 +184,6 @@ u32 get_free_clu(u32 *output) {
         start_clu = 2;
     
     for (int i = start_clu; i < total_info.sectors_per_FAT * SECSIZE / 4; i++) {
-        if ()
+        // if ()
     }
 }

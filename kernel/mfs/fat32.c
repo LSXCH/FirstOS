@@ -7,6 +7,7 @@
 #include <zjunix/mfs/debug.h>
 
 #include "utils.h"
+#include "../fs/fat/utils.h"
 
 extern struct D_cache *dcache;
 extern struct P_cache *pcache;
@@ -192,7 +193,7 @@ u32 fat32_open(MY_FILE *file, u8 *filename) {
 u32 fat32_read(MY_FILE *file, u8 *buf, u32 count) {
     // The clus in data field
     // root -> 2
-    u32 crt_clus = get_start_cluster(file);
+    u32 crt_clus = get_start_clu_num(file);
     u32 filesize = get_file_size(file);
 
 
@@ -235,13 +236,13 @@ u32 fat32_read(MY_FILE *file, u8 *buf, u32 count) {
     file->crt_pointer_position += count;
 }
 
-u32 fs_write(MY_FILE *file, const u8 *buf, u32 count) {
+u32 fat32_write(MY_FILE *file, const u8 *buf, u32 count) {
     if (count == 0)
         return 0;
     
     // Root -> 2
     // No data -> 0
-    u32 crt_clus = get_start_cluster(file);
+    u32 crt_clus = get_start_clu_num(file);
     u32 filesize = get_file_size(file);
 
     // This file has no data before

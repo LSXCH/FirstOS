@@ -50,7 +50,7 @@ struct mem_dentry * get_dentry(u32 sector_num, u32 offset) {
         u32 page_cluster_num = (sector_num - total_info.data_start_sector) / SEC_PER_CLU;
         struct mem_page * location_page = get_page(page_cluster_num);
         kernel_memcpy(result->dentry_data.data, location_page->p_data + offset * DENTRY_SIZE, DENTRY_SIZE);
-        pcache_add(pcache, result);
+        dcache_add(dcache, result);
     } else {
         return result;
     }
@@ -236,7 +236,7 @@ void pcache_drop(struct P_cache *pcache) {
         list_del(&(crt_page->p_hashlist));
 
         if (crt_page->state == PAGE_DIRTY) {
-            write_page(total_info.data_start_sector, crt_page);
+            write_page(&total_info, crt_page);
         }
         kfree(crt_page->p_data);
         kfree(crt_page);
