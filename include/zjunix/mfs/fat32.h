@@ -28,7 +28,7 @@ struct __attribute__((__packed__)) disk_short_dentry_addr {
     u32 size;                     /* file size (in bytes) */
 };
 
-struct __attribute__((__packed)) disk_long_dentry_addr {
+struct __attribute__((__packed__)) disk_long_dentry_addr {
     u8 L_ord;
     u8 name1[10];
     u8 L_addr;
@@ -98,7 +98,7 @@ union BPB_Info {
     struct BPB_attr attr;
 };
 
-struct __attribute__((__packed)) FSI_attr {
+struct __attribute__((__packed__)) FSI_attr {
     u32 lead_signature;
     u8  reserved1[480];
     u32 structure_signature;
