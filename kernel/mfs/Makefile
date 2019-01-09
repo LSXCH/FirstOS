@@ -1,0 +1,3 @@
+OBJS :=  fat32.o fat32cache.o debug.o user.o utils.o
+
+include $(SUB_MAKE_INCLUDE)
