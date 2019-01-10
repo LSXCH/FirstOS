@@ -24,6 +24,9 @@ u32 fat32_cat(u8 *path) {
 
     /* Read */
     u32 file_size = get_file_size(&cat_file);
+#ifdef FS_DEBUG
+    kernel_printf("The file size is %d\n", file_size);
+#endif 
     u8 *buf = (u8 *)kmalloc(file_size + 1);
     fat32_read(&cat_file, buf, file_size);
     buf[file_size] = 0;

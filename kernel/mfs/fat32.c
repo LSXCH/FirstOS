@@ -97,7 +97,7 @@ u32 load_root_dentries() {
 
 u32 fat32_find(MY_FILE *file) {
     u8 *path = file->path;
-    u8 disk_name_str[11];
+    u8 disk_name_str[12];
 
     int slash_traverser = 1;
     if (path[0] != '/') {       // Wrong Path
@@ -120,6 +120,11 @@ u32 fat32_find(MY_FILE *file) {
         // Traverse every cluster of current direcroty
         while (crt_clu != 0x0FFFFFFF) {
 
+#ifdef FS_DEBUG
+        disk_name_str[11] = 0;
+        kernel_printf("The current searching is %s\n", disk_name_str);
+#endif
+
             // Traverse every sector in current cluster
             for (int i = 0; i < SEC_PER_CLU; i++) {
                 // Traverse every dentry in current sector
@@ -132,6 +137,9 @@ u32 fat32_find(MY_FILE *file) {
                         return 0;
                     else if (disk_name_cmp(tmp->dentry_data.data, disk_name_str)) {
                         crt_directory = tmp;
+#ifdef FS_DEBUG
+                        kernel_printf("found!%d\n", 1);
+#endif
                         goto found_sub_dir;
                     }
                 }
@@ -197,6 +205,9 @@ u32 fat32_read(MY_FILE *file, u8 *buf, u32 count) {
     u32 crt_clus = get_start_clu_num(file);
     u32 filesize = get_file_size(file);
 
+#ifdef FS_DEBUG
+    kernel_printf("crt_clus : %d\n", crt_clus);
+#endif
 
     if (file->crt_pointer_position + count > filesize)
         count = filesize - file->crt_pointer_position;
@@ -331,7 +342,7 @@ u32 fat32_close(MY_FILE *file) {
     fat32_fflush();
 }
 
-u32 fs_create(u8 *filename) {
+u32 fat32_create(u8 *filename) {
     // get the file name and path
     
 }

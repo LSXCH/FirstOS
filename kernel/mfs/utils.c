@@ -1,4 +1,5 @@
 #include <driver/sd.h>
+#include <driver/vga.h>
 
 #include "utils.h"
 #include "../fs/fat/utils.h"
@@ -141,8 +142,8 @@ u32 get_clu_by_dentry(struct mem_dentry *crt_dentry) {
 
     u32 clu_num = (u32)(crt_dentry->dentry_data.short_attr.starthi) << 16 | crt_dentry->dentry_data.short_attr.startlow;
 #ifdef FS_DEBUG
-    u32 hi = get_u16(&crt_dentry->dentry_data.short_attr.starthi);
-    u32 lo = get_u16(&crt_dentry->dentry_data.short_attr.startlo);
+    u32 hi = get_u16((u8*)&(crt_dentry->dentry_data.short_attr.starthi));
+    u32 lo = get_u16((u8*)(&crt_dentry->dentry_data.short_attr.startlow));
     u32 debug = (u32)hi << 16 | lo;
     kernel_printf("FS_DEBUG   direct : %d, debug : %d\n", clu_num, debug);
 #endif
