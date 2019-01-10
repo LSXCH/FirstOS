@@ -140,13 +140,9 @@ u32 get_clu_by_dentry(struct mem_dentry *crt_dentry) {
     if (crt_dentry->dentry_data.short_attr.attr & 0x08)
         return 2;
 
-    u32 clu_num = (u32)(crt_dentry->dentry_data.short_attr.starthi) << 16 | crt_dentry->dentry_data.short_attr.startlow;
-#ifdef FS_DEBUG
-    u32 hi = get_u16((u8*)&(crt_dentry->dentry_data.short_attr.starthi));
-    u32 lo = get_u16((u8*)(&crt_dentry->dentry_data.short_attr.startlow));
-    u32 debug = (u32)hi << 16 | lo;
-    kernel_printf("FS_DEBUG   direct : %d, debug : %d\n", clu_num, debug);
-#endif
+    u32 hi = get_u16(crt_dentry->dentry_data.data+20);
+    u32 lo = get_u16(crt_dentry->dentry_data.data+26);
+    u32 clu_num = (u32)hi << 16 | lo;
     return clu_num;
 }
 
@@ -172,7 +168,7 @@ u32 get_start_clu_num(MY_FILE *file) {
 // Return the file size
 u32 get_file_size(MY_FILE *file) {
     struct mem_dentry *crt_entry = get_dentry(file->disk_dentry_sector_num, file->disk_dentry_num_offset);
-    return crt_entry->dentry_data.short_attr.size;
+    return get_u32(crt_entry->dentry_data.data+28);
 }
 
 // Input the pointer to output
