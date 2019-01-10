@@ -168,4 +168,6 @@ u32 fat32_read(MY_FILE *file, u8 *buf, u32 count);
 u32 fat32_write(MY_FILE *file, const u8 *buf, u32 count);
 u32 fat32_close(MY_FILE *file);
 u32 fat32_cat(u8 *path);
+void fat32_lseek(MY_FILE *file, u32 new_loc);
+u32 fs_create(u8 *filename);
 #endif

@@ -28,7 +28,7 @@ u32 fat32_cat(u8 *path) {
     fat32_read(&cat_file, buf, file_size);
     buf[file_size] = 0;
     kernel_printf("%s\n", buf);
-    // fs_close(&cat_file);
+    fat32_close(&cat_file);
     kfree(buf);
     return 0;
 }

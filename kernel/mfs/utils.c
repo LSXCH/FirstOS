@@ -176,14 +176,31 @@ u32 get_file_size(MY_FILE *file) {
 
 // Input the pointer to output
 // The free cluster num is saved in output
-// The cluster number in data field
+// The cluster number in FAT block
+// root -> 2
 u32 get_free_clu(u32 *output) {
     // Get the cluster which is allocated latestly
     u32 start_clu = total_info.fsi_info.attr.next_free_cluster;
     if (start_clu == 0xFFFFFFFF)
         start_clu = 2;
     
-    for (int i = start_clu; i < total_info.sectors_per_FAT * SECSIZE / 4; i++) {
-        // if ()
+    u32 i;
+    u32 last_FATentry_num = total_info.sectors_per_FAT * SECSIZE / 4;
+    for (i = start_clu; i < last_FATentry_num; i++) {
+        if (get_next_clu_num(i) == 0x00000000){
+            *output = i;
+            return 0;
+        }
     }
+    
+    // If cannot find in those clusters after it
+    for (i = 2; i < start_clu; i++) {
+        if (get_next_clu_num(i) == 0x00000000) {
+            *output = i;
+            return 0;
+        }
+    }
+
+    // If there is no memory
+    return 1;
 }

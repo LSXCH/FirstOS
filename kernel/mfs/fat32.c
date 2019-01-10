@@ -8,6 +8,7 @@
 
 #include "utils.h"
 #include "../fs/fat/utils.h"
+#include "../../usr/ls.h"
 
 extern struct D_cache *dcache;
 extern struct P_cache *pcache;
@@ -322,6 +323,15 @@ u32 fat32_write(MY_FILE *file, const u8 *buf, u32 count) {
     return buf_index;
 }
 
+void fat32_lseek(MY_FILE *file, u32 new_loc) {
+    file->crt_pointer_position = new_loc;
+}
+
 u32 fat32_close(MY_FILE *file) {
     fat32_fflush();
+}
+
+u32 fs_create(u8 *filename) {
+    // get the file name and path
+    
 }
