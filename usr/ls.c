@@ -1,5 +1,6 @@
 #include <driver/vga.h>
 #include <zjunix/fs/fat.h>
+#include "../include/zjunix/mfs/dir.h"
 
 char *cut_front_blank(char *str) {
     char *s = str;
@@ -53,19 +54,24 @@ int ls(char *para) {
     unsigned int next;
     unsigned int r;
     unsigned int p_len;
-    FS_FAT_DIR dir;
+    DIR *Dir;
+    dirent *_dirent;
 
     p = cut_front_blank(p);
     p_len = strlen(p);
     next = each_param(p, pwd, 0, ' ');
 
-    if (fs_open_dir(&dir, pwd)) {
-        kernel_printf("open dir(%s) failed : No such directory!\n", pwd);
-        return 1;
-    }
+    Dir = opendir(pwd);
+    kernel_printf("The dir's clus is %d\n", Dir->start_clus);
+    readdir(Dir);
+    return 0;
+    // if (fs_open_dir(&dir, pwd)) {
+    //     kernel_printf("open dir(%s) failed : No such directory!\n", pwd);
+    //     return 1;
+    // }
 
 readdir:
-    r = fs_read_dir(&dir, (unsigned char *)&entry);
+    // r = fs_read_dir(&dir, (unsigned char *)&entry);
     if (1 != r) {
         if (-1 == r) {
             kernel_printf("\n");

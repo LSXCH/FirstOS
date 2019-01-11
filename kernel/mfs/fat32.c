@@ -300,17 +300,18 @@ u32 fat32_read(MY_FILE *file, u8 *buf, u32 count) {
     return 0;
 }
 
-u32 fat32_write(MY_FILE *file, const u8 *buf, u32 count) {
+u32 fat32_write(MY_FILE *file, u8 *buf, u32 count) {
     if (count == 0)
         return 0;
     
     // Root -> 2
     // No data -> 0
 
-    kernel_printf("writing!\n");
+    // kernel_printf("writing!\n");
 
     u32 crt_clus = get_start_clu_num(file);
     u32 filesize = get_file_size(file);
+    kernel_printf("start clus got!\n");
 
 
     kernel_printf("crt_clus : %d\n", crt_clus);

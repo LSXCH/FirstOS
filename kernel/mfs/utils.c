@@ -145,6 +145,7 @@ u32 get_clu_by_dentry(struct mem_dentry *crt_dentry) {
     u32 hi = get_u16(crt_dentry->dentry_data.data+20);
     u32 lo = get_u16(crt_dentry->dentry_data.data+26);
     u32 clu_num = (u32)hi << 16 | lo;
+    // kernel_printf("GOT CLU BY DENTRY\n");
     return clu_num;
 }
 
@@ -162,6 +163,7 @@ u32 get_next_clu_num(u32 crt_clu) {
 // return 2
 u32 get_start_clu_num(MY_FILE *file) {
     struct mem_dentry *crt_entry = get_dentry(file->disk_dentry_sector_num, file->disk_dentry_num_offset);
+    // kernel_printf("GET START CLU DENTRY \n");
     return get_clu_by_dentry(crt_entry);
 }
 

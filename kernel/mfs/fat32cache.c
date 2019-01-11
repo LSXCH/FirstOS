@@ -49,10 +49,10 @@ struct mem_dentry * get_dentry(u32 sector_num, u32 offset) {
         result->abs_sector_num = sector_num;
         result->sector_dentry_offset = offset;
         u32 page_cluster_num = (sector_num - total_info.data_start_sector) / SEC_PER_CLU;
-#ifdef FS_DEBUG
-        kernel_printf("query page %d\n", page_cluster_num);
-        kernel_printf("offset = %d\n", offset);
-#endif
+//#ifdef FS_DEBUG
+        // kernel_printf("query page %d\n", page_cluster_num);
+        // kernel_printf("offset = %d\n", offset);
+//#endif
         struct mem_page * location_page = get_page(page_cluster_num);
         kernel_memcpy(result->dentry_data.data, location_page->p_data + offset * DENTRY_SIZE, DENTRY_SIZE);
         dcache_add(dcache, result);
@@ -112,13 +112,14 @@ struct mem_dentry * dcache_lookup(struct D_cache *dcache, u32 sector_num, u32 of
     u32 hash = __intHash(sector_num * DENTRY_PER_SEC + offset, C_TABLESIZE);
 
     table_head = dcache->c_hashtable + hash;
-
+    // kernel_printf("hash head index is %x\n", table_head);
     list_for_each(crt_node, table_head) {
+        // kernel_printf("just test %x\n", crt_node);
         crt_entry = list_entry(crt_node, struct mem_dentry, d_hashlist);
         if (crt_entry->abs_sector_num == sector_num && crt_entry->sector_dentry_offset == offset) {
-#ifdef FS_DEBUG
-            kernel_printf("dcache_lookup_found!\n");
-#endif
+//#ifdef FS_DEBUG
+            // kernel_printf("dcache_lookup_found!\n");
+//#endif
             break;
         }
     }
@@ -195,7 +196,11 @@ void dcache_add(struct D_cache *dcache, struct mem_dentry *data) {
         dcache_drop(dcache);
     }
 
-    list_add(&(data->d_hashlist), dcache->c_hashtable+hash);
+
+    list_add(&(data->d_hashlist), &(dcache->c_hashtable[hash]));
+    // if (hash == 1) {
+    //     kernel_printf("ADDDDDRESS:%x\n", dcache->c_hashtable[1].next->next);
+    // }
     list_add(&(data->d_LRU), &(dcache->c_LRU));
 
     dcache->crt_size++;
@@ -208,7 +213,7 @@ void pcache_add(struct P_cache *pcache, struct mem_page *data) {
         pcache_drop(pcache);
     }
 
-    list_add(&(data->p_hashlist), pcache->c_hashtable+hash);
+    list_add(&(data->p_hashlist), &(pcache->c_hashtable[hash]));
     list_add(&(data->p_LRU), &(pcache->c_LRU));
 
     pcache->crt_size++;
@@ -221,7 +226,7 @@ void tcache_add(struct T_cache *tcache, struct mem_FATbuffer *data) {
         tcache_drop(tcache);
     }
 
-    list_add(&(data->t_hashlist), tcache->c_hashtable+hash);
+    list_add(&(data->t_hashlist), &(tcache->c_hashtable[hash]));
     list_add(&(data->t_LRU), &(tcache->c_LRU));
 #ifdef FS_DEBUG
     kernel_printf("TCACHE ADD: added!");
