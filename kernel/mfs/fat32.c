@@ -251,6 +251,7 @@ u32 fat32_read(MY_FILE *file, u8 *buf, u32 count) {
 
 #ifdef FS_DEBUG
     kernel_printf("crt_clus : %d\n", crt_clus);
+    kernel_printf("file size is : %d\n", filesize);
 #endif
 
     if (file->crt_pointer_position + count > filesize)
@@ -305,8 +306,15 @@ u32 fat32_write(MY_FILE *file, const u8 *buf, u32 count) {
     
     // Root -> 2
     // No data -> 0
+
+    kernel_printf("writing!\n");
+
     u32 crt_clus = get_start_clu_num(file);
     u32 filesize = get_file_size(file);
+
+
+    kernel_printf("crt_clus : %d\n", crt_clus);
+    kernel_printf("file size is : %d\n", filesize);
 
     // This file has no data before
     if (crt_clus == 0) {
@@ -395,5 +403,4 @@ u32 fat32_close(MY_FILE *file) {
 
 u32 fat32_create(u8 *filename) {
     // get the file name and path
-    
 }

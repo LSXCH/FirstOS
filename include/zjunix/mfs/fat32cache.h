@@ -20,6 +20,25 @@
     tmp_page->state = PAGE_DIRTY; \
 }
 
+struct arguments {
+    void *arg1;
+    void *arg2;
+};
+
+struct redis_cache_oprations {
+    void* (*get)(struct redis_cache*, struct arguments*);
+    void* (*look_up)(struct redis_cache*, struct arguments*);
+    void (*add)(struct redis_cache*, void*);
+    void (*drop_entry)(void*);
+};
+
+struct redis_cache {
+    u32 max_capacity;
+    u32 crt_size;
+    u32 table_size;
+    struct list_head *c_hashtable;
+};
+
 struct D_cache {
     u32 max_capacity;
     u32 crt_size;

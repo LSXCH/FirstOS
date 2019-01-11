@@ -308,15 +308,15 @@ u32 update_FAT(u32 crt_clus, u32 next_clus) {
 }
 
 void fat32_fflush() {
-    for (int i = 0; i < dcache->crt_size; i++) {
-        dcache_drop(dcache);
-    }
-    for (int i = 0; i < pcache->crt_size; i++) {
-        pcache_drop(pcache);
-    }
-    for (int i = 0; i < tcache->crt_size; i++) {
-        tcache_drop(tcache);
-    }
+    // for (int i = 0; i < dcache->crt_size; i++) {
+    //     dcache_drop(dcache);
+    // }
+    // for (int i = 0; i < pcache->crt_size; i++) {
+    //     pcache_drop(pcache);
+    // }
+    // for (int i = 0; i < tcache->crt_size; i++) {
+    //     tcache_drop(tcache);
+    // }
 }
 
 

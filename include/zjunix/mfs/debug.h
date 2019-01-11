@@ -1,6 +1,6 @@
 #ifndef _MFS_DEBUG_H
 #define _MFS_DEBUG_H
-#define FS_DEBUG
+// #define FS_DEBUG
 #ifdef FS_DEBUG
 #include "fat32.h"
 
