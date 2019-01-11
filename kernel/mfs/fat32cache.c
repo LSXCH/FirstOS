@@ -49,9 +49,14 @@ struct mem_dentry * get_dentry(u32 sector_num, u32 offset) {
         result->abs_sector_num = sector_num;
         result->sector_dentry_offset = offset;
         u32 page_cluster_num = (sector_num - total_info.data_start_sector) / SEC_PER_CLU;
+#ifdef FS_DEBUG
+        kernel_printf("query page %d\n", page_cluster_num);
+        kernel_printf("offset = %d\n", offset);
+#endif
         struct mem_page * location_page = get_page(page_cluster_num);
         kernel_memcpy(result->dentry_data.data, location_page->p_data + offset * DENTRY_SIZE, DENTRY_SIZE);
         dcache_add(dcache, result);
+        return result;
     } else {
         return result;
     }
@@ -71,6 +76,7 @@ struct mem_page * get_page(u32 relative_cluster_num) {
 #ifdef FSDEBUG
         dump_page_info(result);
 #endif
+        return result;
     }
     return result;
 }
@@ -84,8 +90,15 @@ struct mem_FATbuffer *get_FATBuf(u32 FAT_num, u32 sec_num) {
         result->fat_num = FAT_num;
         result->sec_num_in_FAT = sec_num;
         result->t_data = (u8 *) kmalloc(SECTOR_SIZE);
+#ifdef FS_DEBUG
+        kernel_printf("malloced address t_data : %x\n", result->t_data);
+#endif
         read_FAT_buf(&total_info, result);
+#ifdef FS_DEBUG
+        kernel_printf("BEFORE TACHE ADD!\n");
+#endif
         tcache_add(tcache, result);
+        return result;
     }
     
     return result;
@@ -103,6 +116,9 @@ struct mem_dentry * dcache_lookup(struct D_cache *dcache, u32 sector_num, u32 of
     list_for_each(crt_node, table_head) {
         crt_entry = list_entry(crt_node, struct mem_dentry, d_hashlist);
         if (crt_entry->abs_sector_num == sector_num && crt_entry->sector_dentry_offset == offset) {
+#ifdef FS_DEBUG
+            kernel_printf("dcache_lookup_found!\n");
+#endif
             break;
         }
     }
@@ -121,7 +137,7 @@ struct mem_page * pcache_lookup(struct P_cache *pcache, u32 relative_cluster_num
     struct list_head *table_head;
     struct list_head *crt_node;
     struct mem_page *crt_page;
-    
+
     u32 hash = __intHash(relative_cluster_num, C_TABLESIZE);
 
     table_head = pcache->c_hashtable + hash;
@@ -129,6 +145,9 @@ struct mem_page * pcache_lookup(struct P_cache *pcache, u32 relative_cluster_num
     list_for_each(crt_node, table_head) {
         crt_page = list_entry(crt_node, struct mem_page, p_hashlist);
         if (crt_page->data_cluster_num == relative_cluster_num) {
+#ifdef FS_DEBUG
+            kernel_printf("look up found!%d\n", relative_cluster_num);
+#endif
             break;
         }
     }
@@ -204,9 +223,15 @@ void tcache_add(struct T_cache *tcache, struct mem_FATbuffer *data) {
 
     list_add(&(data->t_hashlist), tcache->c_hashtable+hash);
     list_add(&(data->t_LRU), &(tcache->c_LRU));
+#ifdef FS_DEBUG
+    kernel_printf("TCACHE ADD: added!");
+#endif
 }
 
 void dcache_drop(struct D_cache *dcache) {
+#ifdef FS_DEBUG
+    kernel_printf("DROP DCACHE\n");
+#endif
     struct list_head *LRU_head = &(dcache->c_LRU);
     struct list_head *victim = LRU_head->prev;
     struct mem_dentry *crt_entry;
@@ -226,6 +251,9 @@ void dcache_drop(struct D_cache *dcache) {
 }
 
 void pcache_drop(struct P_cache *pcache) {
+#ifdef FS_DEBUG
+    kernel_printf("DROP PCACHE\n");
+#endif
     struct list_head *LRU_head = &(pcache->c_LRU);
     struct list_head *victim = LRU_head->prev;
     struct mem_page *crt_page;
@@ -246,6 +274,9 @@ void pcache_drop(struct P_cache *pcache) {
 }
 
 void tcache_drop(struct T_cache *tcache) {
+#ifdef FS_DEBUG
+    kernel_printf("DROP PCACHE\n");
+#endif
     struct list_head *LRU_head = &(tcache->c_LRU);
     struct list_head *victim = LRU_head->prev;
     struct mem_FATbuffer *crt_buf;

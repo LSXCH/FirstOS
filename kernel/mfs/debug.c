@@ -8,11 +8,11 @@ void dump_bpb_info_(struct BPB_attr_* bpb) {
 }
 
 void dump_fat_info_(struct Total_FAT_Info *total_info) {
-    kernel_printf("BaseAddress: %x\n", total_info->base_addr);
-    kernel_printf("Reserved sectors: %x\n", total_info->reserved_sectors_cnt);
-    kernel_printf("Data sectors count: %x\n", total_info->data_sectors_cnt);
-    kernel_printf("Sectors per FAT: %x\n", total_info->sectors_per_FAT);
-    kernel_printf("Data start sector: %x\n", total_info->data_start_sector);
+    kernel_printf("BaseAddress: %d\n", total_info->base_addr);
+    kernel_printf("Reserved sectors: %d\n", total_info->reserved_sectors_cnt);
+    kernel_printf("Data sectors count: %d\n", total_info->data_sectors_cnt);
+    kernel_printf("Sectors per FAT: %d\n", total_info->sectors_per_FAT);
+    kernel_printf("Data start sector: %d\n", total_info->data_start_sector);
 }
 
 void dump_page_info_(struct mem_page *page) {

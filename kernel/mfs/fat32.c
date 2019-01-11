@@ -52,8 +52,8 @@ u32 init_total_info() {
         return COMMON_ERR;
     }
     log(LOG_OK, "BPB loaded!");
-#ifdef FSDEBUG
-    dump_bpb_info(&total_info.bpb_info.attr);
+#ifdef FS_DEBUG
+    dump_bpb_info_(&total_info.bpb_info.attr);
 #endif
 
     if (total_info.bpb_info.attr.sector_size != SECTOR_SIZE) {
@@ -63,7 +63,7 @@ u32 init_total_info() {
 
     // Calculate the total number of data sectors for furthur using
     total_info.reserved_sectors_cnt = total_info.bpb_info.attr.reserved_sectors;
-    total_info.sectors_per_FAT = total_info.bpb_info.attr.sectors_per_fat;
+    total_info.sectors_per_FAT = total_info.bpb_info.attr.num_of_sectors_per_fat;
     total_info.data_start_sector = total_info.reserved_sectors_cnt + 2 * total_info.sectors_per_FAT;
     total_info.data_sectors_cnt = total_info.bpb_info.attr.num_of_sectors - total_info.data_start_sector;
 
@@ -72,8 +72,8 @@ u32 init_total_info() {
     }
     log(LOG_OK, "FSInfo loaded!");
 
-#ifdef FSDEBUG
-    data_start_sector(&total_info);
+#ifdef FS_DEBUG
+    dump_fat_info_(&total_info);
 #endif
 
     return 0;
@@ -93,6 +93,18 @@ u32 load_root_dentries() {
     pwd_dentry->sector_dentry_offset = 0;
     
     dcache_add(dcache, pwd_dentry);
+
+    struct mem_FATbuffer * result;
+
+    result = (struct mem_FATbuffer *) kmalloc(sizeof(struct mem_FATbuffer));
+    result->state = PAGE_CLEAN;
+    result->fat_num = 1;
+    result->sec_num_in_FAT = 0;
+    result->t_data = (u8 *) kmalloc(SECTOR_SIZE);
+
+    read_FAT_buf(&total_info, result);
+    tcache_add(tcache, result);
+
 }
 
 u32 fat32_find(MY_FILE *file) {
@@ -115,7 +127,12 @@ u32 fat32_find(MY_FILE *file) {
             return 1;
         // The address in FAT block
         // Root -> 2
-        crt_clu = get_clu_by_dentry(crt_directory);
+        // crt_clu = get_clu_by_dentry(crt_directory);
+        crt_clu = 2;
+#ifdef FS_DEBUG
+        kernel_printf("root dir clu %d == 2\n", crt_clu);
+#endif
+
 
         // Traverse every cluster of current direcroty
         while (crt_clu != 0x0FFFFFFF) {
@@ -126,27 +143,54 @@ u32 fat32_find(MY_FILE *file) {
 #endif
 
             // Traverse every sector in current cluster
-            for (int i = 0; i < SEC_PER_CLU; i++) {
+            for (u32 i = 0; i < SEC_PER_CLU; i++) {
                 // Traverse every dentry in current sector
-                for (int j = 0; j < DENTRY_PER_SEC; j++) {
+                for (u32 j = 0; j < DENTRY_PER_SEC; j++) {
                     int tmp_dentry_addr = total_info.data_start_sector + (crt_clu - 2) * SEC_PER_CLU + i;
                     struct mem_dentry *tmp = get_dentry(tmp_dentry_addr, j);
+#ifdef FS_DEBUG
+                    for (int _i = 0; _i < 32; _i++)
+                        kernel_printf("%c", tmp->dentry_data.data[_i]);
+                    kernel_printf("\n");
+#endif
                     // If the first data of name attribute is 0x00, means it is the end
                     // So there is no matching file of this path
+#ifdef FS_DEBUG
+                    kernel_printf("check %c.%c\n", tmp->dentry_data.data[0], tmp->dentry_data.data[8]);
+#endif
+                    if ((*(tmp->dentry_data.data+11) & 0x08) != 0)
+                    {
+#ifdef FS_DEBUG
+                        kernel_printf("long entry\n");
+#endif
+                        continue;
+                    }
                     if (tmp->dentry_data.data[0] == 0x00)   // Not found
                         return 0;
-                    else if (disk_name_cmp(tmp->dentry_data.data, disk_name_str)) {
+                    else if (disk_name_cmp(tmp->dentry_data.data, disk_name_str)==0) {
                         crt_directory = tmp;
 #ifdef FS_DEBUG
                         kernel_printf("found!%d\n", 1);
+                        kernel_printf("entry size %d\n", get_u32(tmp->dentry_data.data+28));
 #endif
-                        goto found_sub_dir;
+                        goto found_dir;
                     }
+#ifdef FS_DEBUG
+                    else {
+                        kernel_printf("Not found h.txt\n");
+                    }
+#endif
                 }
             }
             // Get the next cluster
             // A -> 3
+#ifdef FS_DEBUG
+            kernel_printf("crt clu:%d\n", crt_clu);
+#endif
             crt_clu = get_next_clu_num(crt_clu);
+#ifdef FS_DEBUG
+            kernel_printf("next clu:%d\n", next_clu);
+#endif
         }
         if (crt_clu + 2 == 0x0FFFFFFF)  // Not found
             return 0;
@@ -158,7 +202,7 @@ u32 fat32_find(MY_FILE *file) {
 
     if (slash_offset == 0xFFFFFFFF) // Invalid path
         return 1;
-
+found_dir:
     file->disk_dentry_sector_num = crt_directory->abs_sector_num;
     file->disk_dentry_num_offset = crt_directory->sector_dentry_offset;
     return 0;
@@ -241,11 +285,18 @@ u32 fat32_read(MY_FILE *file, u8 *buf, u32 count) {
             buf_index += _end - _start;
         }
         // Get the next cluster num in data field
+#ifdef FS_DEBUG
+        kernel_printf("before get next clus\n");
+#endif
         crt_clus = get_next_clu_num(crt_clus);
+#ifdef FS_DEBUG
+        kernel_printf("READ: next_clus = %d\n", crt_clus);
+#endif
         clus_index++;
     }
     // The count is already been checked
     file->crt_pointer_position += count;
+    return 0;
 }
 
 u32 fat32_write(MY_FILE *file, const u8 *buf, u32 count) {

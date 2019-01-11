@@ -17,6 +17,9 @@ u32 write_sector(u8 *buf, u32 addr, u32 count) {
 
 u32 read_page(struct Total_FAT_Info * total_info, struct mem_page* crt_page) {
     u32 sector_address = total_info->base_addr + total_info->data_start_sector + crt_page->data_cluster_num * SEC_PER_CLU;
+#ifdef FS_DEBUG
+    kernel_printf("read page sector address %d\n", sector_address);
+#endif
     return sd_read_block(crt_page->p_data, sector_address, SEC_PER_CLU);
 }
 
@@ -29,7 +32,10 @@ u32 write_page(struct Total_FAT_Info * total_info, struct mem_page* crt_page) {
 u32 read_FAT_buf(struct Total_FAT_Info * total_info, struct mem_FATbuffer* crt_buf) {
     u32 sector_address = total_info->base_addr + total_info->reserved_sectors_cnt + 
                         total_info->sectors_per_FAT * (crt_buf->fat_num-1) + crt_buf->sec_num_in_FAT;
-    return sd_read_block(crt_buf->t_data, sector_address, 1);
+#ifdef FS_DEBUG
+    kernel_printf("READ FAT BUF: sector_address:%d\n", sector_address);
+#endif
+    return read_sector(crt_buf->t_data, sector_address, 1);
 }
 u32 write_FAT_buf(struct Total_FAT_Info * total_info, struct mem_FATbuffer* crt_buf) {
     u32 sector_address = total_info->base_addr + total_info->reserved_sectors_cnt + 
@@ -135,10 +141,6 @@ inline u32 is_directory(struct mem_dentry *crt_dentry) {
 // data:   / : 00 00 return 2
 // data:   A : 03 00 return 3
 u32 get_clu_by_dentry(struct mem_dentry *crt_dentry) {
-    
-    // If it is the root directory
-    if (crt_dentry->dentry_data.short_attr.attr & 0x08)
-        return 2;
 
     u32 hi = get_u16(crt_dentry->dentry_data.data+20);
     u32 lo = get_u16(crt_dentry->dentry_data.data+26);
@@ -151,7 +153,7 @@ u32 get_clu_by_dentry(struct mem_dentry *crt_dentry) {
 // Output : The num in FAT block
 //          FAT[2] -> 3
 u32 get_next_clu_num(u32 crt_clu) {
-    struct mem_FATbuffer *crt_FAT = get_FATBuf(1, crt_clu / DENTRY_PER_SEC);
+    struct mem_FATbuffer *crt_FAT = get_FATBuf(1, crt_clu / 128);
     return get_u32(crt_FAT->t_data + crt_clu * 4) & 0x0FFFFFFF;
 }
 
