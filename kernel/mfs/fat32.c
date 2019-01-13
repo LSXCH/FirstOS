@@ -88,9 +88,9 @@ u32 load_root_dentries() {
 
     pwd_dentry->name[0] = 0;
     pwd_dentry->spinned = 1;
-    crt_dentry->dentry_data.short_attr.attr = 0x10;
-    crt_dentry->dentry_data.short_attr.starthi = 0;
-    crt_dentry->dentry_data.short_attr.startlow = 2;
+    pwd_dentry->dentry_data.short_attr.attr = 0x10;
+    pwd_dentry->dentry_data.short_attr.starthi = 0;
+    pwd_dentry->dentry_data.short_attr.startlow = 2;
     pwd_dentry->abs_sector_num = total_info.data_start_sector;
     pwd_dentry->sector_dentry_offset = 0;
     

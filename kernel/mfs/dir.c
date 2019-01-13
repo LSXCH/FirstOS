@@ -1,5 +1,7 @@
 #include "../../include/zjunix/mfs/dir.h"
 #include "utils.h"
+#include <zjunix/slab.h>
+#include <driver/vga.h>
 
 
 extern struct D_cache *dcache;
@@ -21,7 +23,7 @@ DIR * opendir(u8 *path) {
     else if (path[0] == '/') {
         MY_FILE *myfile;
         fat32_open(myfile, path);
-        ans->start_clus = get_start_clu_num(file);
+        ans->start_clus = get_start_clu_num(myfile);
         ans->crt_index = 0;
         return ans;
     }

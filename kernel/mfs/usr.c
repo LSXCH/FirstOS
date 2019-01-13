@@ -55,7 +55,7 @@ u32 fat32_cd(u8 *path) {
         return 1;
     }
 
-    struct mem_dentry *crt_entry = get_dentry(file->disk_dentry_sector_num, file->disk_dentry_num_offset);
+    struct mem_dentry *crt_entry = get_dentry(cd_path.disk_dentry_sector_num, cd_path.disk_dentry_num_offset);
     pwd_dentry->spinned = 0;
     pwd_dentry = crt_entry;
     pwd_dentry->spinned = 1;

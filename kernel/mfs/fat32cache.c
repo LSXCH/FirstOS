@@ -1,5 +1,6 @@
 #include <zjunix/log.h>
 #include <zjunix/slab.h>
+#include <zjunix/utils.h>
 
 #include <zjunix/mfs/fat32cache.h>
 #include <zjunix/mfs/debug.h>

@@ -11,12 +11,15 @@ void init_pgtable() {
         "mtc0 $zero, $3\n\t"
         "mtc0 $zero, $5\n\t"
         "mtc0 $zero, $10\n\t"
-
+        "lui  $t0, 0x8000\n\t"
+        "li $t1, 0x2000\n\t"
         "move $v0, $zero\n\t"
         "li $v1, 32\n"
 
         "init_pgtable_L1:\n\t"
         "mtc0 $v0, $0\n\t"
+        "mtc0 $t0, $10\n\t"
+        "addu $t0, $t0, $t1\n\t"
         "addi $v0, $v0, 1\n\t"
         "bne $v0, $v1, init_pgtable_L1\n\t"
         "tlbwi\n\t"
