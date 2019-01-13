@@ -7,6 +7,8 @@
 #include <zjunix/mfs/debug.h>
 #include "utils.h"
 
+extern struct Total_FAT_Info total_info;
+extern struct mem_dentry * pwd_dentry;
 
 u32 fat32_cat(u8 *path) {
 #ifdef FS_DEBUG
@@ -40,5 +42,22 @@ u32 fat32_cat(u8 *path) {
 
     fat32_close(&cat_file);
     kfree(buf);
+    return 0;
+}
+
+u32 fat32_cd(u8 *path) {
+    u8 filename[12];
+    MY_FILE cd_path;
+
+    /* Open */
+    if (0 != fat32_open(&cd_path, path)) {
+        log(LOG_FAIL, "Path %s open failed", path);
+        return 1;
+    }
+
+    struct mem_dentry *crt_entry = get_dentry(file->disk_dentry_sector_num, file->disk_dentry_num_offset);
+    pwd_dentry->spinned = 0;
+    pwd_dentry = crt_entry;
+    pwd_dentry->spinned = 1;
     return 0;
 }

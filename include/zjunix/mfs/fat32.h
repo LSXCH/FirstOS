@@ -170,4 +170,5 @@ u32 fat32_close(MY_FILE *file);
 u32 fat32_cat(u8 *path);
 void fat32_lseek(MY_FILE *file, u32 new_loc);
 u32 fat32_create(u8 *filename);
+u32 fat32_cd(u8 *path);
 #endif

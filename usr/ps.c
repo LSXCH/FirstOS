@@ -161,6 +161,9 @@ void parse_cmd() {
     } else if (kernel_strcmp(ps_buffer, "ls") == 0) {
         result = ls(param);
         kernel_printf("ls return with %d\n", result);
+    } else if (kernel_strcmp(ps_buffer, "cd") == 0) {
+        result = fat32_cd(param);
+        kernel_printf("cd return with %d\n", result);
     } else if (kernel_strcmp(ps_buffer, "vi") == 0) {
         result = myvi(param);
         kernel_printf("vi return with %d\n", result);
