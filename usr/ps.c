@@ -184,13 +184,13 @@ void parse_cmd() {
     //     kernel_printf("proc return with %d\n", result);
     }else if(kernel_strcmp(ps_buffer, "execk") == 0){
         kernel_printf("Enter execk\n");
-        result = exec_kernel((void *)param, 0, 0);
+        result = exec_kernel(1, (void *)param, 0, 0);
         kernel_printf("execk return with %d\n", result);
     } else if(kernel_strcmp(ps_buffer, "execk2") == 0){
         kernel_printf("Enter execk2\n");
-        result = exec_kernel((void *)param, 1, 0);
+        result = exec_kernel(1, (void *)param, 1, 0);
         kernel_printf("execk2 return with %d\n", result);
-    }else if (kernel_strcmp(ps_buffer, "cat") == 0) {
+    } else if (kernel_strcmp(ps_buffer, "cat") == 0) {
         result = fat32_cat(param);
         kernel_printf("cat return with %d\n", result);
     } else if (kernel_strcmp(ps_buffer, "ls") == 0) {

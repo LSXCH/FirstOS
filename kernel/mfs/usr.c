@@ -11,10 +11,6 @@ extern struct Total_FAT_Info total_info;
 extern struct mem_dentry * pwd_dentry;
 
 u32 fat32_cat(u8 *path) {
-#ifdef FS_DEBUG
-    kernel_printf("In my cat function.\n");
-#endif
-
 
     u8 filename[12];
     MY_FILE cat_file;
@@ -31,14 +27,11 @@ u32 fat32_cat(u8 *path) {
     kernel_printf("The file size is %d\n", file_size);
 #endif 
     u8 *buf = (u8 *)kmalloc(file_size + 1);
+    u8 *new_buf = (u8 *)kmalloc(2*file_size+1);
 
     fat32_read(&cat_file, buf, file_size);
-    fat32_read(&cat_file, buf, file_size);
     buf[file_size] = 0;
-    // fat32_write(&cat_file, buf, file_size);
-    //new_buf[2*file_size] = 0;
     kernel_printf("%s\n", buf);
-    //kernel_printf("%s\n", new_buf);
 
     fat32_close(&cat_file);
     kfree(buf);

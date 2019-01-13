@@ -89,11 +89,11 @@ u32 load_root_dentries() {
     pwd_dentry->name[0] = 0;
     pwd_dentry->spinned = 1;
     pwd_dentry->dentry_data.short_attr.attr = 0x10;
-    pwd_dentry->dentry_data.short_attr.starthi = 0;
-    pwd_dentry->dentry_data.short_attr.startlow = 2;
+    set_u16(pwd_dentry->dentry_data.data+20, 0);
+    set_u16(pwd_dentry->dentry_data.data+26, 2);
     pwd_dentry->abs_sector_num = total_info.data_start_sector;
     pwd_dentry->sector_dentry_offset = 0;
-    
+
     dcache_add(dcache, pwd_dentry);
 
     struct mem_FATbuffer * result;
@@ -110,37 +110,47 @@ u32 load_root_dentries() {
 }
 
 u32 fat32_find(MY_FILE *file) {
+
     u8 *path = file->path;
     u8 disk_name_str[12];
 
-    int slash_traverser = 1;
+    int slash_traverser;
     struct mem_dentry *crt_directory;
-    if (path[0] == '/') {       // Wrong Path
+    if (path[0] == '/') {
         if (path[1] == 0) {
             file->disk_dentry_sector_num = root_dentry->abs_sector_num;
             file->disk_dentry_num_offset = root_dentry->sector_dentry_offset;
             return 0;
         }
         crt_directory = root_dentry;
+        slash_traverser = 1;
+        
     } else if (path[0] == 0) {
         file->disk_dentry_sector_num = pwd_dentry->abs_sector_num;
         file->disk_dentry_num_offset = pwd_dentry->sector_dentry_offset;
         return 0;
     } else {
         crt_directory = pwd_dentry;
+        slash_traverser = 0;
     }
 
     u32 crt_clu;
     u32 next_clu;
     u32 slash_offset = fs_cut_slash(path+slash_traverser, disk_name_str);
+    disk_name_str[11] = 0;
 
     // Traverse every file name in the path
     while ( slash_offset != 0 && slash_offset != 0xFFFFFFFF ) {
         if ( (crt_directory->dentry_data.short_attr.attr & 0x10) == 0 )      // Path isn't finished, but it is't sub directory
+        {
+            // kernel_printf("before return 1\n");
             return 1;
+        }
         // The address in FAT block
         // Root -> 2
         crt_clu = get_clu_by_dentry(crt_directory);
+
+        // kernel_printf("crt_clu = %d\n", crt_clu);
 
         // Traverse every cluster of current direcroty
         while (crt_clu != 0x0FFFFFFF) {
@@ -289,11 +299,6 @@ u32 fat32_write(MY_FILE *file, u8 *buf, u32 count) {
 
     u32 crt_clus = get_start_clu_num(file);
     u32 filesize = get_file_size(file);
-    kernel_printf("start clus got!\n");
-
-
-    kernel_printf("crt_clus : %d\n", crt_clus);
-    kernel_printf("file size is : %d\n", filesize);
 
     // This file has no data before
     if (crt_clus == 0) {
@@ -307,8 +312,6 @@ u32 fat32_write(MY_FILE *file, u8 *buf, u32 count) {
         update_FAT(crt_clus, 0x0FFFFFFF);
     }
 
-    if (file->crt_pointer_position + count > filesize)
-        count = filesize - file->crt_pointer_position;
     u32 start_clus_num = file->crt_pointer_position / CLUSTER_SIZE;
     u32 start_byte_num = file->crt_pointer_position % CLUSTER_SIZE;
     u32 end_clus_num = (file->crt_pointer_position + count) / CLUSTER_SIZE;
@@ -334,15 +337,16 @@ u32 fat32_write(MY_FILE *file, u8 *buf, u32 count) {
         if (clus_index >= start_clus_num && clus_index <= end_clus_num) {
             // Get start and end byte num
             if (clus_index == start_clus_num) 
-                _start = start_clus_num;
+                _start = start_byte_num;
             else 
                 _start = 0;
             if (clus_index == end_clus_num)
-                _end = end_clus_num;
+                _end = end_byte_num;
             else
                 _end = CLUSTER_SIZE;
             
             struct mem_page *crt_page =  get_page(crt_clus-2);
+            // kernel_printf("_start = %d _end = %d\n", _start, _end);
             kernel_memcpy(crt_page->p_data+_start, (void*)buf + buf_index, _end-_start);
             crt_page->state = PAGE_DIRTY;
             buf_index += _end - _start;
@@ -366,7 +370,15 @@ u32 fat32_write(MY_FILE *file, u8 *buf, u32 count) {
     if (file->crt_pointer_position + count > filesize) {
         u32 sec_num = file->disk_dentry_sector_num, offset = file->disk_dentry_num_offset;
         u16 new_size = file->crt_pointer_position + count;
-        update_dentry(sec_num, offset, size, new_size);
+        // kernel_printf("newsize is %d\n", new_size);
+        // update_dentry(sec_num, offset, size, new_size);
+        struct mem_dentry * tmp_dentry = get_dentry(sec_num, offset);
+        u32 page_cluster_num = (sec_num - total_info.data_start_sector) / SEC_PER_CLU;
+        struct mem_page * tmp_page = get_page(page_cluster_num);
+        set_u32(tmp_dentry->dentry_data.data+28, new_size);
+        union disk_dentry *attributes = (union disk_dentry *)(tmp_page->p_data + offset * DENTRY_SIZE);
+        set_u32(attributes->data+28, new_size);
+        tmp_page->state = PAGE_DIRTY;
     }
 
     return buf_index;

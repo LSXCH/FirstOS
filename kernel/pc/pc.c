@@ -22,6 +22,8 @@ unsigned int sched_time[PRORITY_NUM];
 //当前运行进程指针
 task_struct * current_task = 0;
 
+int argsc = 0;
+
 //初始化所有进程链表
 //在init_pc()中调用
 void init_pc_list(){
@@ -143,15 +145,16 @@ void init_pc(){
 int task_create(char * task_name, long static_prority, void (*entry)(unsigned int argc, void * argv),
                 unsigned int argc, void * argv, pid_t * ret_pid, int is_user){
     //检查静态优先级
+    //print_proc();
     if(static_prority >= PRORITY_NUM || static_prority < 0){
-        kernel_printf("Task_create: static_prority out of range!\n");
+        // kernel_printf("Task_create: static_prority out of range!\n");
         return 1;
     }
     
     //分配PID
     pid_t new_pid;
     if(pid_alloc(&new_pid)){
-        kernel_printf("Task_create: pid allocated failed!\n");
+        // kernel_printf("Task_create: pid allocated failed!\n");
         return 1;
     }
 
@@ -173,6 +176,8 @@ int task_create(char * task_name, long static_prority, void (*entry)(unsigned in
     new_union->task.ppid = current_task->pid;
     kernel_strcpy(new_union->task.name, task_name);
     
+    //print_proc();
+
     // #ifdef PC_DEBUG
     //     kernel_printf("task_name = %s\n", task_name);
     // #endif
@@ -189,6 +194,7 @@ int task_create(char * task_name, long static_prority, void (*entry)(unsigned in
         new_union->task.dynamic_prority = new_union->task.static_prority;
         new_union->task.counter = sched_time[new_union->task.static_prority];
     }
+    argsc++;
     char temp_time[START_TIME_LEN];
     get_time(temp_time, START_TIME_LEN);
     kernel_strcpy(new_union->task.start_time, temp_time);
@@ -206,7 +212,7 @@ int task_create(char * task_name, long static_prority, void (*entry)(unsigned in
     asm volatile("la %0, _gp\n\t" : "=r"(init_gp));
     new_union->task.context.gp = init_gp;
     //设置新进程参数
-    new_union->task.context.a0 = argc;
+    new_union->task.context.a0 = argsc - 1;
     new_union->task.context.a1 = (unsigned int)argv;
 
     INIT_LIST_HEAD(&(new_union->task.sched));
@@ -811,7 +817,7 @@ int kernel_proc(unsigned int argc, void * argv){
 //kernel创建进程
 //新进程的入口函数相同
 //成功返回0，否则返回1
-int exec_kernel(void * argv, int is_wait, int is_user){
+int exec_kernel(int argc, void * argv, int is_wait, int is_user){
     //获得进程名
     char name[TASK_NAME_LEN];
     char * ptr;
@@ -834,7 +840,7 @@ int exec_kernel(void * argv, int is_wait, int is_user){
 
     if(!is_user){
         //内核线程，新进程入口为kernel_proc函数
-        res = task_create(name, s_prority, (void *)kernel_proc, 1, name, &new_pid, 0);
+        res = task_create(name, s_prority, (void *)kernel_proc, argc, name, &new_pid, 0);
     }
     if(res != 0){
         kernel_printf("Exec_kernel: task created failed!\n");

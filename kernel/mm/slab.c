@@ -72,7 +72,7 @@ void *slab_alloc(struct kmem_cache *cache) {
     struct slab_head *s_head;
     void *object = 0;
     struct page *newpage;
-    kernel_printf("enter slab_alloc\n");
+    // kernel_printf("enter slab_alloc\n");
     if (cache->cpu.page==0)
         goto fullPage;
     newpage = cache->cpu.page;
@@ -90,14 +90,14 @@ FreeList:
         kernel_printf("From Free-list\nnr_objs:%d\tobject:%x\tnew slabp:%x\n", s_head->nr_objs, object, newpage7s->slabp);
         // kernel_getchar();
 #endif  // ! SLAB_DEBUG
-        kernel_printf("return FreeList-object\n");
+        // kernel_printf("return FreeList-object\n");
         return object;
     }
 
 fullPage:
     if(list_empty(&(cache->node.partial))){
 
-    kernel_printf("Page is Full\n");
+    // kernel_printf("Page is Full\n");
 
     // call the buddy system to allocate one more page to be slab-cache
     newpage = __alloc_pages(0);// get bplevel = 0 page === one page
@@ -118,7 +118,7 @@ fullPage:
 notFullPage:
     if(s_head->isFull==0)
     {   
-        kernel_printf("enter notFullPage\n");
+        // kernel_printf("enter notFullPage\n");
         object = s_head->end_ptr;
         s_head->end_ptr = object + cache->size;
         ++(s_head->nr_objs);
@@ -157,7 +157,7 @@ void slab_free(struct kmem_cache *cache, void *object) {
     struct slab_head *s_head = (struct slab_head *)KMEM_ADDR(opage, pages);
 
     if (!(s_head->nr_objs)) {
-        kernel_printf("ERROR : slab_free error!\n");
+        // kernel_printf("ERROR : slab_free error!\n");
         // die();
         while (1) ;
     }
@@ -201,7 +201,7 @@ unsigned int get_slab(unsigned int size) {
     unsigned int bf_num = (1 << (PAGE_SHIFT - 1));  // half page
     unsigned int bf_index = PAGE_SHIFT;             // record the best fit num & index
 
-    kernel_printf("enter get_slab\n");
+    // kernel_printf("enter get_slab\n");
     for (i = 0; i < itop; i++) {
         if ((kmalloc_caches[i].objsize >= size) && (kmalloc_caches[i].objsize < bf_num)) {
             bf_num = kmalloc_caches[i].objsize;
@@ -213,12 +213,12 @@ unsigned int get_slab(unsigned int size) {
 
 void *kmalloc(unsigned int size) {
     void *result;
-    kernel_printf("kmalloc size==%d\n", size);
+    // kernel_printf("kmalloc size==%d\n", size);
     if (!size)
         return 0;
     
     result = phy_kmalloc(size);
-    kernel_printf("kmalloc reuslt==%x\n ", result);
+    // kernel_printf("kmalloc reuslt==%x\n ", result);
     if (result) 
         return (void*)(KERNEL_ENTRY | (unsigned int)result);
     else 
@@ -228,7 +228,7 @@ void *kmalloc(unsigned int size) {
 void *phy_kmalloc(unsigned int size) {
     struct kmem_cache *cache;
     unsigned int bf_index;
-    kernel_printf("enter phy_kmalloc\n");
+    // kernel_printf("enter phy_kmalloc\n");
     if (!size)
         return 0;
 
@@ -237,17 +237,17 @@ void *phy_kmalloc(unsigned int size) {
     if (size > kmalloc_caches[PAGE_SHIFT - 1].objsize) {
 
         size =Allign(size, 1<<PAGE_SHIFT);
-        kernel_printf("\n pyh_kmalloc size == %x\n", size);
+        // kernel_printf("\n pyh_kmalloc size == %x\n", size);
         return alloc_pages(size >> PAGE_SHIFT);
     }
 
     bf_index = get_slab(size);
     if (bf_index >= PAGE_SHIFT) {
-        kernel_printf("ERROR: No available slab\n");
+        // kernel_printf("ERROR: No available slab\n");
         while (1)
             ;
     }
-    kernel_printf("return slab_alloc\n");
+    // kernel_printf("return slab_alloc\n");
     return slab_alloc(&(kmalloc_caches[bf_index]));
 }
 

@@ -1,4 +1,5 @@
 #include <zjunix/log.h>
+#include <driver/vga.h>
 #include <zjunix/slab.h>
 #include <zjunix/utils.h>
 
@@ -59,6 +60,7 @@ struct mem_dentry * get_dentry(u32 sector_num, u32 offset) {
         dcache_add(dcache, result);
         return result;
     } else {
+        kernel_printf("dcache look up found!\n");
         return result;
     }
 }

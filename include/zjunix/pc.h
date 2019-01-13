@@ -72,6 +72,7 @@ extern struct list_head tasks;                      //存放所有进程
 extern struct list_head sched[PRORITY_NUM + 1];     //调度链表
 extern task_struct *current_task;                   //当前进程           
 unsigned char pro_map[PRORITY_BYTES];               //优先级位图
+// int argsc = 0;
 
 void init_pc_list();
 void init_pro_map();
@@ -100,7 +101,7 @@ void add_terminal(task_struct * task);
 void task_files_delete(task_struct * task);
 int pc_kill(pid_t pid);
 int kernel_proc(unsigned int argc, void * argv);
-int exec_kernel(void *argv, int is_wait, int is_user);
+int exec_kernel(int argc, void *argv, int is_wait, int is_user);
 task_struct * wait_check(pid_t pid);
 void task_exit();
 void wakeup_parent();

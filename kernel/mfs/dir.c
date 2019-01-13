@@ -20,7 +20,7 @@ DIR * opendir(u8 *path) {
         ans->crt_index = 0;
         return ans;
     }
-    else if (path[0] == '/') {
+    else {
         MY_FILE *myfile;
         fat32_open(myfile, path);
         ans->start_clus = get_start_clu_num(myfile);
@@ -52,11 +52,6 @@ dirent *readdir(DIR *dir) {
 
     while (crt_clu != 0x0FFFFFFF) {
 
-#ifdef FS_DEBUG
-        disk_name_str[11] = 0;
-        kernel_printf("The current searching is %s\n", disk_name_str);
-#endif
-
         // Traverse every sector in current cluster
         for (u32 i = 0; i < SEC_PER_CLU; i++) {
             // Traverse every dentry in current sector
@@ -83,15 +78,6 @@ dirent *readdir(DIR *dir) {
                 if (tmp->dentry_data.data[0] == 0x00)   // Not found
                     return 0;
                 print_disk_name(tmp->dentry_data.data);
-#ifdef FS_DEBUG
-                    kernel_printf("found!%d\n", 1);
-                    kernel_printf("entry size %d\n", get_u32(tmp->dentry_data.data+28));
-#endif
-#ifdef FS_DEBUG
-                else {
-                    kernel_printf("Not found h.txt\n");
-                }
-#endif
             }
         }
         // Get the next cluster
@@ -101,7 +87,7 @@ dirent *readdir(DIR *dir) {
 #endif
         crt_clu = get_next_clu_num(crt_clu);
 #ifdef FS_DEBUG
-        kernel_printf("next clu:%d\n", next_clu);
+        kernel_printf("next clu:%d\n", crt_clu);
 #endif
     }
 }

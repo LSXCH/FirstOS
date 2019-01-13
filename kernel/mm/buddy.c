@@ -135,22 +135,22 @@ struct page *__alloc_pages(unsigned int bplevel) {
     unsigned int current_order, size;
     struct page *page, *buddy_page;
     struct freelist *free;
-    kernel_printf("enter __alloc_pages\n");
+    // kernel_printf("enter __alloc_pages\n");
     lockup(&buddy.lock);
     //search pages
     for (current_order = bplevel; current_order <= MAX_BUDDY_ORDER; ++current_order) {
         free = buddy.freelist + current_order;
-        kernel_printf("free == %x\n", free);
+        // kernel_printf("free == %x\n", free);
         if (!list_empty(&(free->free_head)))
             goto found;
     }
     //if not found
     unlock(&buddy.lock);
-    kernel_printf("__alloc_pages not found\n");
+    // kernel_printf("__alloc_pages not found\n");
     return 0;
 
 found:
-    kernel_printf("have found\n");
+    // kernel_printf("have found\n");
     page = container_of(free->free_head.next, struct page, list);
     list_del_init(&(page->list));
     set_bplevel(page, bplevel);
@@ -174,7 +174,7 @@ found:
     }
 
     unlock(&buddy.lock);
-    kernel_printf("\n return page \n");
+    // kernel_printf("\n return page \n");
     return page;
 }
 
@@ -187,17 +187,17 @@ void *alloc_pages(unsigned int level) {
     while(1<<bplevel<level)
         bplevel++;
 
-    kernel_printf("bplevel == %x", bplevel);
+    // kernel_printf("bplevel == %x", bplevel);
 
     struct page *page = __alloc_pages(bplevel);
 
     if (!page)
         {
-            kernel_printf("page ==0\n");
+            // kernel_printf("page ==0\n");
             return 0;
         }
 
-    kernel_printf("return (void *)((page - pages) << PAGE_SHIFT) \n");
+    // kernel_printf("return (void *)((page - pages) << PAGE_SHIFT) \n");
     return (void *)((page - pages) << PAGE_SHIFT);
 }
 
