@@ -51,9 +51,12 @@ struct buddy_sys {
 #define _is_same_bpgroup(page, bage) (((*(page)).bplevel == (*(bage)).bplevel))
 #define _is_same_bplevel(page, lval) ((*(page)).bplevel == (lval))
 #define set_bplevel(page, lval) ((*(page)).bplevel = (lval))
+
+#define set_flags(page, val) ((*(page)).flag = (val))
 #define set_flag(page, val) ((*(page)).flag |= (val))
 #define clean_flag(page, val) ((*(page)).flag &= ~(val))
 #define has_flag(page, val) ((*(page)).flag & val)
+
 #define set_ref(page, val) ((*(page)).reference = (val))
 #define inc_ref(page, val) ((*(page)).reference += (val))
 #define dec_ref(page, val) ((*(page)).reference -= (val))
@@ -64,12 +67,10 @@ extern struct buddy_sys buddy;
 extern void __free_pages(struct page *page, unsigned int order);
 extern struct page *__alloc_pages(unsigned int order);
 
+
 extern void free_pages(void *addr, unsigned int order);
-
 extern void *alloc_pages(unsigned int order);
-
 extern void init_buddy();
-
 extern void buddy_info();
 
 #endif

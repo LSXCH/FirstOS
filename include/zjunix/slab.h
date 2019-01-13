@@ -16,6 +16,7 @@
 struct slab_head {
     void *end_ptr;
     unsigned int nr_objs;
+    char isFull;
 };
 
 /*
@@ -49,5 +50,6 @@ struct kmem_cache {
 extern void init_slab();
 extern void *kmalloc(unsigned int size);
 extern void kfree(void *obj);
+extern void *phy_kmalloc(unsigned int size);
 
 #endif

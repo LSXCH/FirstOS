@@ -2,6 +2,9 @@
 #define _ZJUNIX_UITILS_H
 
 #define container_of(ptr, type, member) ((type*)((char*)ptr - (char*)&(((type*)0)->member)))
+#define Allign(x, y) (((x)+((y)-1)) & ~((y)-1))
+#define MAX(x, y) ((x)>(y))?(x):(y)
+#define MIN(x, y) ((x)<(y))?(x):(y)
 
 void* kernel_memcpy(void* dest, void* src, int len);
 void* kernel_memset(void* dest, int b, int len);

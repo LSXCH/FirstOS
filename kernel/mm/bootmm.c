@@ -6,6 +6,7 @@
 struct bootmm bmm;
 unsigned int firstusercode_start;
 unsigned int firstusercode_len;
+#define Allign(x, y) (((x)+((y)-1)) & ~((y)-1))
 
 // const value for ENUM of mem_type
 char *mem_msg[] = {"Kernel code/data", "Mm Bitmap", "Vga Buffer", "Kernel page directory", "Kernel page table", "Dynamic", "Reserved"};
@@ -30,43 +31,40 @@ for deleting
 */
 unsigned int insert_mminfo(struct bootmm *mm, unsigned int start, unsigned int end, unsigned int type) {
     unsigned int i;
+    struct bootmm_info *infoArray = mm->info;
     for (i = 0; i < mm->cnt_infos; i++) {
-        if (mm->info[i].type != type)
+        if(infoArray[i].start>start)
+            break;
+        if (infoArray[i].type != type)
             continue;  // ignore the type-mismatching items to find one likely
                        // mergable
-        if (mm->info[i].end == start - 1) {
-            // new-in mm is connecting to the forwarding one
-            if ((i + 1) < mm->cnt_infos) {
-                // current info is still not the last segment
-                if (mm->info[i + 1].type != type) {  // next seg is of
-                    mm->info[i].end = end;
-                    return 2;
-                } else {
-                    if (mm->info[i + 1].start - 1 == end) {
-                        mm->info[i].end = mm->info[i + 1].end;
-                        remove_mminfo(mm, i + 1);
-                        return 7;
+        if (infoArray[i].end == start - 1) {// new-in mm is connecting to the forwarding one
+            if ((i + 1) < mm->cnt_infos) {// current info is still not the last segment
+                   if (infoArray[i+1].type==type && infoArray[i+1].start==end+1) {
+                    // Two-way merging
+                    infoArray[i].end = infoArray[i + 1].end;
+                    remove_mminfo(mm, i + 1);
+                    return TwowayMerge;
                     }
                 }
-            } else {  // current info is the last segment
-                // extend the last segment to containing the new-in mm
-                mm->info[i].end = end;
-                return 6;
+            // Forward Merging
+            infoArray[i].end = end;
+            return ForwardMerge;
             }
         }
-        if (mm->info[i].start - 1 == end) {
-            // new-in mm is connecting to the following one
-            kernel_printf("type of %d : %x, type: %x", i, mm->info[i].type, type);
-            mm->info[i].start = start;
-            return 4;
+        if (i >= MAX_INFO) {
+        return Failed;
+    }
+    if (i < mm->cnt_infos) {
+        if (infoArray[i].type==type && infoArray[i].start==end+1) {
+
+            infoArray[i].start = start;
+            return BackwardMerge;            // Backward Merging
         }
     }
-
-    if (mm->cnt_infos >= MAX_INFO)
-        return 0;  // cannot
-    set_mminfo(mm->info + mm->cnt_infos, start, end, type);
-    ++mm->cnt_infos;
-    return 1;  // individual segment(non-connecting to any other)
+    set_mminfo(infoArray+mm->cnt_infos, start, end, type);
+    mm->cnt_infos=mm->cnt_infos+1;
+    return NoMerge;
 }
 
 /* get one sequential memory area to be split into two parts
@@ -87,6 +85,8 @@ unsigned int split_mminfo(struct bootmm *mm, unsigned int index, unsigned int sp
     if (mm->cnt_infos == MAX_INFO)
         return 0;  // number of segments are reaching max, cannot alloc anymore
                    // segments
+    if(index>=mm->cnt_infos)
+            return 0;//invaild index
     // using copy and move, to get a mirror segment of mm->info[index]
     for (tmp = mm->cnt_infos - 1; tmp >= index; --tmp) {
         mm->info[tmp + 1] = mm->info[tmp];
@@ -156,29 +156,30 @@ unsigned char *find_pages(unsigned int page_cnt, unsigned int s_pfn, unsigned in
     unsigned int index, tmp;
     unsigned int cnt;
 
-    s_pfn += (align_pfn - 1);
-    s_pfn &= ~(align_pfn - 1);
+    if(align_pfn==0)
+        align_pfn=1;
+    s_pfn = Allign(s_pfn , align_pfn);
 
     for (index = s_pfn; index < e_pfn;) {
         if (bmm.s_map[index] == PAGE_USED) {
             ++index;
             continue;
         }
-
-        cnt = page_cnt;
         tmp = index;
+        cnt = page_cnt;
+       
         while (cnt) {
             if (tmp >= e_pfn)
                 return 0;
             // reaching end, but allocate request still cannot be satisfied
 
-            if (bmm.s_map[tmp] == PAGE_FREE) {
-                tmp++;  // find next possible free page
-                cnt--;
-            }
-            if (bmm.s_map[tmp] == PAGE_USED) {
+            if (bmm.s_map[index] == PAGE_USED) {
+                index = tmp+1;//space begin after temp
                 break;
             }
+
+            tmp++;
+            cnt--;
         }
         if (cnt == 0) {  // cnt = 0 indicates that the specified page-sequence found
             bmm.last_alloc_end = tmp - 1;
@@ -188,16 +189,17 @@ unsigned char *find_pages(unsigned int page_cnt, unsigned int s_pfn, unsigned in
             index = tmp + align_pfn;  // there will be no possible memory space
                                       // to be allocated before tmp
         }
+        index = Allign(index, align_pfn);
     }
-    return 0;
+    if(index>=e_pfn)
+        return 0;
 }
 
 unsigned char *bootmm_alloc_pages(unsigned int size, unsigned int type, unsigned int align) {
     unsigned int size_inpages;
     unsigned char *res;
 
-    size += ((1 << PAGE_SHIFT) - 1);
-    size &= PAGE_ALIGN;
+    size = Allign (size, 1 << PAGE_SHIFT);
     size_inpages = size >> PAGE_SHIFT;
 
     // in normal case, going forward is most likely to find suitable area
@@ -223,4 +225,48 @@ void bootmap_info(unsigned char *msg) {
     for (index = 0; index < bmm.cnt_infos; ++index) {
         kernel_printf("\t%x-%x : %s\n", bmm.info[index].start, bmm.info[index].end, mem_msg[bmm.info[index].type]);
     }
+}
+
+void bootmm_free_pages(unsigned int start, unsigned int size)
+{
+    unsigned int index, size_inpages;
+    struct bootmm_info target;
+    unsigned int end = start + size -1;
+    size = size&PAGE_ALIGN;
+    size_inpages = size>>PAGE_SHIFT;
+
+    start = start&PAGE_ALIGN;
+
+    target = bmm.info[index];
+    for(index = 0;index<bmm.cnt_infos;index++)
+    {
+        if(bmm.info[index].start<=start && bmm.info[index].end>=end)
+            break;
+    }
+
+    if(index==bmm.cnt_infos)
+    {
+        kernel_printf("bootmm_free_pages: No allocated space %x-%x\n", start, end);
+        return;
+    }
+
+    if(target.start == start)
+    {
+        if(target.end==end)
+            remove_mminfo(&bmm, index);
+        else//the fromt 
+            set_mminfo(bmm.info+index, start+index, target.end, target.type);
+    }
+    else if(target.end == end)//the rear
+        set_mminfo(bmm.info+index, target.start, start-1, target.type);
+    else
+    {
+        if(split_mminfo(&bmm, index, start)==0)
+        {
+            kernel_printf("bootmm_free_pages:split failed\n");
+            return;
+        }
+        set_mminfo(bmm.info+index+1, end+1, target.end, target.type);
+    }
+    set_maps(start<<PAGE_SHIFT, size_inpages, PAGE_FREE);
 }

@@ -5,6 +5,8 @@
 #include <zjunix/lock.h>
 #include <zjunix/utils.h>
 
+#define Allign(x, y) (((x)+((y)-1)) & ~((y)-1))
+
 unsigned int kernel_start_pfn, kernel_end_pfn;
 
 struct page *pages;
@@ -25,7 +27,7 @@ void buddy_info() {
     }
 }
 
-// this function is to init all memory with page struct
+// init all memory with page struct
 void init_pages(unsigned int start_pfn, unsigned int end_pfn) {
     unsigned int i;
     for (i = start_pfn; i < end_pfn; i++) {
@@ -64,8 +66,7 @@ void init_buddy() {
     }
     kernel_end_pfn >>= PAGE_SHIFT;
 
-    buddy.buddy_start_pfn = (kernel_end_pfn + (1 << MAX_BUDDY_ORDER) - 1) &
-                            ~((1 << MAX_BUDDY_ORDER) - 1);              // the pages that bootmm using cannot be merged into buddy_sys
+    buddy.buddy_start_pfn = Allign(kernel_end_pfn,1<<MAX_BUDDY_ORDER);          // the pages that bootmm using cannot be merged into buddy_sys
     buddy.buddy_end_pfn = bmm.max_pfn & ~((1 << MAX_BUDDY_ORDER) - 1);  // remain 2 pages for I/O
 
     // init freelists of all bplevels
@@ -89,10 +90,6 @@ void __free_pages(struct page *pbpage, unsigned int bplevel) {
     unsigned int combined_idx, tmp;
     struct page *bgroup_page;
 
-    // dec_ref(pbpage, 1);
-    // if(pbpage->reference)
-    //	return;
-
     lockup(&buddy.lock);
 
     page_idx = pbpage - buddy.start_page;
@@ -101,25 +98,36 @@ void __free_pages(struct page *pbpage, unsigned int bplevel) {
     while (bplevel < MAX_BUDDY_ORDER) {
         bgroup_idx = page_idx ^ (1 << bplevel);
         bgroup_page = pbpage + (bgroup_idx - page_idx);
-        // kernel_printf("group%x %x\n", (page_idx), bgroup_idx);
-        if (!_is_same_bplevel(bgroup_page, bplevel)) {
-            // kernel_printf("%x %x\n", bgroup_page->bplevel, bplevel);
+        #ifdef budd_debug
+        kernel_printf("group%x %x\n", (page_idx), bgroup_idx);
+        #endif
+        if(bgroup_page->flag!=0)//the page has been allocated
+            break;
 
+        if (!_is_same_bplevel(bgroup_page, bplevel)) {
+            #ifdef budd_debug
+            kernel_printf("%x %x\n", bgroup_page->bplevel, bplevel);
+            #endif
             break;
         }
         list_del_init(&bgroup_page->list);
         --buddy.freelist[bplevel].nr_free;
         set_bplevel(bgroup_page, -1);
         combined_idx = bgroup_idx & page_idx;
-        pbpage += (combined_idx - page_idx);
+        pbpage =pbpage + (combined_idx - page_idx);
         page_idx = combined_idx;
-        ++bplevel;
+        bplevel++;
     }
+
     set_bplevel(pbpage, bplevel);
+
+//    (*(pbpage).flag) = 0;//buddy free
+
     list_add(&(pbpage->list), &(buddy.freelist[bplevel].free_head));
-    ++buddy.freelist[bplevel].nr_free;
-    // kernel_printf("v%x__addto__%x\n", &(pbpage->list),
-    // &(buddy.freelist[bplevel].free_head));
+#ifdef budd_debug  
+    kernel_printf("v%x__addto__%x\n", pbpage->list, buddy.freelist[bplevel].free_head);
+#endif
+     ++buddy.freelist[bplevel].nr_free;
     unlock(&buddy.lock);
 }
 
@@ -127,23 +135,28 @@ struct page *__alloc_pages(unsigned int bplevel) {
     unsigned int current_order, size;
     struct page *page, *buddy_page;
     struct freelist *free;
-
+    kernel_printf("enter __alloc_pages\n");
     lockup(&buddy.lock);
-
+    //search pages
     for (current_order = bplevel; current_order <= MAX_BUDDY_ORDER; ++current_order) {
         free = buddy.freelist + current_order;
+        kernel_printf("free == %x\n", free);
         if (!list_empty(&(free->free_head)))
             goto found;
     }
-
+    //if not found
     unlock(&buddy.lock);
+    kernel_printf("__alloc_pages not found\n");
     return 0;
 
 found:
+    kernel_printf("have found\n");
     page = container_of(free->free_head.next, struct page, list);
     list_del_init(&(page->list));
     set_bplevel(page, bplevel);
-    set_flag(page, _PAGE_ALLOCED);
+   // set_flag(page, _PAGE_ALLOCED);
+   // (*(page)).flag = _PAGE_ALLOCED;
+   set_flags(page, _PAGE_ALLOCED);
     // set_ref(page, 1);
     --(free->nr_free);
 
@@ -153,21 +166,38 @@ found:
         --current_order;
         size >>= 1;
         buddy_page = page + size;
-        list_add(&(buddy_page->list), &(free->free_head));
+        list_add(&(buddy_page->list), &(free->free_head));//add into free list 
         ++(free->nr_free);
         set_bplevel(buddy_page, current_order);
+        //(*(buddy_page)).flag = 0;//set to 0
+        set_flags(buddy_page, _PAGE_ALLOCED);
     }
 
     unlock(&buddy.lock);
+    kernel_printf("\n return page \n");
     return page;
 }
 
-void *alloc_pages(unsigned int bplevel) {
+void *alloc_pages(unsigned int level) {
+
+    unsigned int bplevel = 0;
+    if(level==0)
+        return 0;
+
+    while(1<<bplevel<level)
+        bplevel++;
+
+    kernel_printf("bplevel == %x", bplevel);
+
     struct page *page = __alloc_pages(bplevel);
 
     if (!page)
-        return 0;
+        {
+            kernel_printf("page ==0\n");
+            return 0;
+        }
 
+    kernel_printf("return (void *)((page - pages) << PAGE_SHIFT) \n");
     return (void *)((page - pages) << PAGE_SHIFT);
 }
 

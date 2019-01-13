@@ -5,24 +5,17 @@
 #include <zjunix/bootmm.h>
 #include <zjunix/buddy.h>
 #include <zjunix/fs/fat.h>
+#include <zjunix/mfs/fat32.h>
 #include <zjunix/slab.h>
 #include <zjunix/time.h>
+#include <zjunix/vm.h>
 #include <zjunix/utils.h>
-#include <zjunix/mfs/fat32.h>
 #include "../usr/ls.h"
 #include "exec.h"
 #include "myvi.h"
 
 char ps_buffer[64];
 int ps_buffer_index;
-
-void test_syscall4() {
-    asm volatile(
-        "li $a0, 0x00ff\n\t"
-        "li $v0, 4\n\t"
-        "syscall\n\t"
-        "nop\n\t");
-}
 
 void test_proc() {
     unsigned int timestamp;
@@ -39,16 +32,38 @@ void test_proc() {
     }
 }
 
-int proc_demo_create() {
-    int asid = pc_peek();
-    if (asid < 0) {
-        kernel_puts("Failed to allocate pid.\n", 0xfff, 0);
-        return 1;
-    }
-    unsigned int init_gp;
-    asm volatile("la %0, _gp\n\t" : "=r"(init_gp));
-    pc_create(asid, test_proc, (unsigned int)kmalloc(4096), init_gp, "test");
-    return 0;
+// int proc_demo_create() {
+//     int asid = pc_peek();
+//     if (asid < 0) {
+//         kernel_puts("Failed to allocate pid.\n", 0xfff, 0);
+//         return 1;
+//     }
+//     unsigned int init_gp;
+//     asm volatile("la %0, _gp\n\t" : "=r"(init_gp));
+//     pc_create(asid, test_proc, (unsigned int)kmalloc(4096), init_gp, "test");
+//     return 0;
+// }
+
+void testMem() {
+    int i;
+    int total = 100;
+    //int sizeArr[200];
+    int *addrArr[200];
+    int size = 100;
+    //for (i=0; i<total; i++) sizeArr[i] = 100;
+    
+    // for (i=10; i<100; i++) sizeArr[i] = 2<<12;
+    // for (i=100; i<total; i++) sizeArr[i] = 4<<12;
+    for (i=0; i<total; i++) addrArr[i] = kmalloc(size);
+    kernel_printf("Allocate %d blocks sized %d byte\n", total, size);
+    // bootmap_info("bootmm");
+    buddy_info();
+    // kernel_getkey();
+    
+    for (i=0; i<total; i++) kfree(addrArr[i]);
+    kernel_printf("Deallocate\n");
+    // bootmap_info("bootmm");
+    buddy_info();
 }
 
 void ps() {
@@ -58,8 +73,9 @@ void ps() {
     ps_buffer_index = 0;
     ps_buffer[0] = 0;
     kernel_clear_screen(31);
-    kernel_puts("PowerShell\n", 0xfff, 0);
-    kernel_puts("PS>", 0xfff, 0);
+    //kernel_puts("PowerShell\n", 0xfff, 0);
+    kernel_puts("PS", VGA_BLUE, VGA_BLACK);
+    kernel_puts(">", VGA_GREEN, VGA_BLACK);
     while (1) {
         c = kernel_getchar();
         if (c == '\n') {
@@ -71,7 +87,8 @@ void ps() {
             } else
                 parse_cmd();
             ps_buffer_index = 0;
-            kernel_puts("PS>", 0xfff, 0);
+            kernel_puts("PS", VGA_BLUE, VGA_BLACK);
+            kernel_puts(">", VGA_GREEN, VGA_BLACK);
         } else if (c == 0x08) {
             if (ps_buffer_index) {
                 ps_buffer_index--;
@@ -116,8 +133,6 @@ void parse_cmd() {
         char buf[10];
         get_time(buf, sizeof(buf));
         kernel_printf("%s\n", buf);
-    } else if (kernel_strcmp(ps_buffer, "syscall4") == 0) {
-        test_syscall4();
     } else if (kernel_strcmp(ps_buffer, "sdwi") == 0) {
         for (i = 0; i < 512; i++)
             sd_buffer[i] = i;
@@ -140,22 +155,42 @@ void parse_cmd() {
         buddy_info();
     } else if (kernel_strcmp(ps_buffer, "mmtest") == 0) {
         kernel_printf("kmalloc : %x, size = 1KB\n", kmalloc(1024));
-    } else if (kernel_strcmp(ps_buffer, "ps") == 0) {
+    } else if (kernel_strcmp(ps_buffer, "mt") == 0) {
+        testMem();
+        kernel_printf("Memory test return with 0\n");
+    } else if (kernel_strcmp(ps_buffer, "vm") == 0) {
+        struct mm_struct* mm = mm_create();
+        kernel_printf("Create succeed. %x\n", mm);
+        mm_delete(mm);   
+    }else if (kernel_strcmp(ps_buffer, "ps") == 0) {
+        
+        disable_interrupts();
+
         result = print_proc();
+
+        enable_interrupts();
         kernel_printf("ps return with %d\n", result);
     } else if (kernel_strcmp(ps_buffer, "kill") == 0) {
         int pid = param[0] - '0';
         kernel_printf("Killing process %d\n", pid);
         result = pc_kill(pid);
         kernel_printf("kill return with %d\n", result);
-    } else if (kernel_strcmp(ps_buffer, "time") == 0) {
-        unsigned int init_gp;
-        asm volatile("la %0, _gp\n\t" : "=r"(init_gp));
-        pc_create(2, system_time_proc, (unsigned int)kmalloc(4096), init_gp, "time");
-    } else if (kernel_strcmp(ps_buffer, "proc") == 0) {
-        result = proc_demo_create();
-        kernel_printf("proc return with %d\n", result);
-    } else if (kernel_strcmp(ps_buffer, "cat") == 0) {
+    // } else if (kernel_strcmp(ps_buffer, "time") == 0) {
+    //     //unsigned int init_gp;
+    //     //asm volatile("la %0, _gp\n\t" : "=r"(init_gp));
+    //     task_create("time", 0, (void *)system_time_proc, 0, 0, 0, 0);
+    // } else if (kernel_strcmp(ps_buffer, "proc") == 0) {
+    //     result = proc_demo_create();
+    //     kernel_printf("proc return with %d\n", result);
+    }else if(kernel_strcmp(ps_buffer, "execk") == 0){
+        kernel_printf("Enter execk\n");
+        result = exec_kernel((void *)param, 0, 0);
+        kernel_printf("execk return with %d\n", result);
+    } else if(kernel_strcmp(ps_buffer, "execk2") == 0){
+        kernel_printf("Enter execk2\n");
+        result = exec_kernel((void *)param, 1, 0);
+        kernel_printf("execk2 return with %d\n", result);
+    }else if (kernel_strcmp(ps_buffer, "cat") == 0) {
         result = fat32_cat(param);
         kernel_printf("cat return with %d\n", result);
     } else if (kernel_strcmp(ps_buffer, "ls") == 0) {

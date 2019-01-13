@@ -7,7 +7,6 @@
 #include <zjunix/bootmm.h>
 #include <zjunix/buddy.h>
 #include <zjunix/fs/fat.h>
-#include <zjunix/mfs/fat32.h>
 #include <zjunix/log.h>
 #include <zjunix/pc.h>
 #include <zjunix/slab.h>
@@ -31,12 +30,21 @@ void machine_info() {
 #pragma GCC push_options
 #pragma GCC optimize("O0")
 void create_startup_process() {
-    unsigned int init_gp;
-    asm volatile("la %0, _gp\n\t" : "=r"(init_gp));
-    pc_create(1, ps, (unsigned int)kmalloc(4096) + 4096, init_gp, "powershell");
-    log(LOG_OK, "Shell init");
-    pc_create(2, system_time_proc, (unsigned int)kmalloc(4096) + 4096, init_gp, "time");
-    log(LOG_OK, "Timer init");
+    int res;
+
+    res = task_create("Shell_init", 0, (void *)ps, 0, 0, 0, 0);
+    if(res != 0){
+        kernel_printf("Create startup process failed!\n");
+    }
+    else{
+        kernel_printf("Shell_init created!");
+    }
+    // unsigned int init_gp;
+    // asm volatile("la %0, _gp\n\t" : "=r"(init_gp));
+    // pc_create(1, ps, (unsigned int)kmalloc(4096) + 4096, init_gp, "powershell");
+    // log(LOG_OK, "Shell init");
+    // pc_create(2, system_time_proc, (unsigned int)kmalloc(4096) + 4096, init_gp, "time");
+    // log(LOG_OK, "Timer init");
 }
 #pragma GCC pop_options
 
@@ -60,13 +68,15 @@ void init_kernel() {
     log(LOG_END, "Memory Modules.");
     // File system
     log(LOG_START, "File System.");
-    init_fat32();
+    init_fs();
     log(LOG_END, "File System.");
     // System call
     log(LOG_START, "System Calls.");
     init_syscall();
     log(LOG_END, "System Calls.");
     // Process control
+    log(LOG_END, "PID Module.");
+    init_pid();
     log(LOG_START, "Process Control Module.");
     init_pc();
     create_startup_process();
