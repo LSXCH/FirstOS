@@ -141,16 +141,12 @@ u32 fat32_find(MY_FILE *file) {
 
     // Traverse every file name in the path
     while ( slash_offset != 0 && slash_offset != 0xFFFFFFFF ) {
-        if ( (crt_directory->dentry_data.short_attr.attr & 0x10) == 0 )      // Path isn't finished, but it is't sub directory
-        {
-            // kernel_printf("before return 1\n");
+        if ( (crt_directory->dentry_data.short_attr.attr & 0x10) == 0 ) {       // Path isn't finished, but it is't sub directory
             return 1;
         }
         // The address in FAT block
         // Root -> 2
         crt_clu = get_clu_by_dentry(crt_directory);
-
-        // kernel_printf("crt_clu = %d\n", crt_clu);
 
         // Traverse every cluster of current direcroty
         while (crt_clu != 0x0FFFFFFF) {

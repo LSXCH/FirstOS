@@ -16,6 +16,7 @@ struct T_cache *tcache;
 extern struct Total_FAT_Info total_info;
 
 u32 init_cache() {
+    // allocate memory
     dcache = (struct D_cache*) kmalloc(sizeof(struct D_cache));
     pcache = (struct P_cache*) kmalloc(sizeof(struct P_cache));
     tcache = (struct T_cache*) kmalloc(sizeof(struct T_cache));
@@ -25,6 +26,7 @@ u32 init_cache() {
         return COMMON_ERR;
     }
 
+    // init attributes
     dcache->crt_size = pcache->crt_size = tcache->crt_size = 0;
     dcache->max_capacity = pcache->max_capacity = tcache->max_capacity = C_CAPACITY;
     INIT_LIST_HEAD(&(dcache->c_LRU));
@@ -44,7 +46,9 @@ u32 init_cache() {
 
 // Return the mem_dentry struct with no path name
 struct mem_dentry * get_dentry(u32 sector_num, u32 offset) {
+    // look up first
     struct mem_dentry * result = dcache_lookup(dcache, sector_num, offset);
+    // if not found
     if (result == 0) {
         result = (struct mem_dentry *) kmalloc(sizeof(struct mem_dentry));
         result->spinned = 0;
@@ -55,6 +59,7 @@ struct mem_dentry * get_dentry(u32 sector_num, u32 offset) {
         // kernel_printf("query page %d\n", page_cluster_num);
         // kernel_printf("offset = %d\n", offset);
 //#endif
+        // require the corresponding page
         struct mem_page * location_page = get_page(page_cluster_num);
         kernel_memcpy(result->dentry_data.data, location_page->p_data + offset * DENTRY_SIZE, DENTRY_SIZE);
         dcache_add(dcache, result);
@@ -67,13 +72,15 @@ struct mem_dentry * get_dentry(u32 sector_num, u32 offset) {
 
 // Input the cluster to data field
 struct mem_page * get_page(u32 relative_cluster_num) {
+    // look up first
     struct mem_page * result = pcache_lookup(pcache, relative_cluster_num);
-
+    // if not found
     if (result == 0) {
         result = (struct mem_page *) kmalloc(sizeof(struct mem_page));
         result->state = PAGE_CLEAN;
         result->data_cluster_num = relative_cluster_num;
         result->p_data = (u8 *) kmalloc(CLUSTER_SIZE);
+        // read the corresponding page on disk
         read_page(&total_info, result);
         pcache_add(pcache, result);
 #ifdef FSDEBUG
@@ -85,6 +92,7 @@ struct mem_page * get_page(u32 relative_cluster_num) {
 }
 
 struct mem_FATbuffer *get_FATBuf(u32 FAT_num, u32 sec_num) {
+    // look up first then same as page cache
     struct mem_FATbuffer * result = tcache_lookup(tcache, FAT_num, sec_num);
 
     if (result == 0) {
@@ -112,23 +120,24 @@ struct mem_dentry * dcache_lookup(struct D_cache *dcache, u32 sector_num, u32 of
     struct list_head *crt_node;
     struct mem_dentry *crt_entry;
 
+    // Get hash value
     u32 hash = __intHash(sector_num * DENTRY_PER_SEC + offset, C_TABLESIZE);
 
+    // get hash list head
     table_head = dcache->c_hashtable + hash;
     // kernel_printf("hash head index is %x\n", table_head);
     list_for_each(crt_node, table_head) {
         // kernel_printf("just test %x\n", crt_node);
         crt_entry = list_entry(crt_node, struct mem_dentry, d_hashlist);
+        // check if they match
         if (crt_entry->abs_sector_num == sector_num && crt_entry->sector_dentry_offset == offset) {
-//#ifdef FS_DEBUG
-            // kernel_printf("dcache_lookup_found!\n");
-//#endif
             break;
         }
     }
 
     // Update LRU list
     if (crt_node != table_head) {
+        // delete and add can make it to the head
         list_del(&(crt_entry->d_LRU));
         list_add(&(crt_entry->d_LRU), &(dcache->c_LRU));
         return crt_entry;
@@ -142,12 +151,15 @@ struct mem_page * pcache_lookup(struct P_cache *pcache, u32 relative_cluster_num
     struct list_head *crt_node;
     struct mem_page *crt_page;
 
+    // Get hash value
     u32 hash = __intHash(relative_cluster_num, C_TABLESIZE);
 
+    // get hash list head
     table_head = pcache->c_hashtable + hash;
 
     list_for_each(crt_node, table_head) {
         crt_page = list_entry(crt_node, struct mem_page, p_hashlist);
+        // check if they match
         if (crt_page->data_cluster_num == relative_cluster_num) {
 #ifdef FS_DEBUG
             kernel_printf("look up found!%d\n", relative_cluster_num);
@@ -171,12 +183,15 @@ struct mem_FATbuffer * tcache_lookup(struct T_cache *tcache, u32 FAT_num, u32 se
     struct list_head *crt_node;
     struct mem_FATbuffer *crt_buf;
 
+    // Get hash value
     u32 hash = __intHash(sec_num, C_TABLESIZE);
 
+    // get hash list head
     table_head = tcache->c_hashtable+hash;
 
     list_for_each(crt_node, table_head) {
         crt_buf = list_entry(crt_node, struct mem_FATbuffer, t_hashlist);
+        // check if they match
         if (crt_buf->fat_num == FAT_num && crt_buf->sec_num_in_FAT == sec_num) {
             break;
         }
@@ -195,20 +210,20 @@ struct mem_FATbuffer * tcache_lookup(struct T_cache *tcache, u32 FAT_num, u32 se
 void dcache_add(struct D_cache *dcache, struct mem_dentry *data) {
     u32 hash = __intHash(data->abs_sector_num * DENTRY_PER_SEC + data->sector_dentry_offset, C_TABLESIZE);
 
+    // If full, drop one
     if (dcache->crt_size == dcache->max_capacity) {
         dcache_drop(dcache);
     }
 
 
+    // link current node to hash list and LRU list
     list_add(&(data->d_hashlist), &(dcache->c_hashtable[hash]));
-    // if (hash == 1) {
-    //     kernel_printf("ADDDDDRESS:%x\n", dcache->c_hashtable[1].next->next);
-    // }
     list_add(&(data->d_LRU), &(dcache->c_LRU));
 
     dcache->crt_size++;
 }
 
+// The same as above
 void pcache_add(struct P_cache *pcache, struct mem_page *data) {
     u32 hash = __intHash(data->data_cluster_num, C_TABLESIZE);
 
@@ -222,6 +237,7 @@ void pcache_add(struct P_cache *pcache, struct mem_page *data) {
     pcache->crt_size++;
 }
 
+// The same as above
 void tcache_add(struct T_cache *tcache, struct mem_FATbuffer *data) {
     u32 hash = __intHash(data->sec_num_in_FAT, C_TABLESIZE);
 
@@ -236,6 +252,7 @@ void tcache_add(struct T_cache *tcache, struct mem_FATbuffer *data) {
 #endif
 }
 
+// Drop one item
 void dcache_drop(struct D_cache *dcache) {
 #ifdef FS_DEBUG
     kernel_printf("DROP DCACHE\n");
@@ -244,9 +261,11 @@ void dcache_drop(struct D_cache *dcache) {
     struct list_head *victim = LRU_head->prev;
     struct mem_dentry *crt_entry;
     
+    // If no cache or just root cache, return 
     if (dcache->crt_size == 0 || dcache->crt_size == 1) return;
     else {
         crt_entry = list_entry(victim, struct mem_dentry, d_LRU);
+        // check whether spinned
         if (crt_entry->spinned != 0) {
             victim = victim->prev;
             crt_entry = list_entry(victim, struct mem_dentry, d_LRU);
@@ -266,12 +285,15 @@ void pcache_drop(struct P_cache *pcache) {
     struct list_head *victim = LRU_head->prev;
     struct mem_page *crt_page;
     
+    // if it has no pcache reutrn 
     if (pcache->crt_size == 0) return;
     else {
+        // delete from LRU and hash list
         crt_page = list_entry(victim, struct mem_page, p_LRU);
         list_del(victim);
         list_del(&(crt_page->p_hashlist));
 
+        // if it is dirty, write back
         if (crt_page->state == PAGE_DIRTY) {
             write_page(&total_info, crt_page);
         }
@@ -281,6 +303,7 @@ void pcache_drop(struct P_cache *pcache) {
     }
 }
 
+// The same as above
 void tcache_drop(struct T_cache *tcache) {
 #ifdef FS_DEBUG
     kernel_printf("DROP PCACHE\n");
@@ -304,10 +327,13 @@ void tcache_drop(struct T_cache *tcache) {
     }
 }
 
+// Use address to updagte FAT
 u32 update_FAT(u32 crt_clus, u32 next_clus) {
+    // get FAT buf by cluster
     struct mem_FATbuffer *crtBuffer = get_FATBuf(1, crt_clus * 4 / SECTOR_SIZE);
     set_u32(crtBuffer->t_data + crt_clus * 4, next_clus);
     crtBuffer->state = PAGE_DIRTY;
+    // update fat table
     crtBuffer = get_FATBuf(2, crt_clus * 4 / SECTOR_SIZE);
     set_u32(crtBuffer->t_data + crt_clus * 4, next_clus);
     crtBuffer->state = PAGE_DIRTY;
@@ -315,19 +341,23 @@ u32 update_FAT(u32 crt_clus, u32 next_clus) {
     return 0;
 }
 
+// Flush all the cache to sd card
 void fat32_fflush() {
-    // for (int i = 0; i < dcache->crt_size; i++) {
-    //     dcache_drop(dcache);
-    // }
-    // for (int i = 0; i < pcache->crt_size; i++) {
-    //     pcache_drop(pcache);
-    // }
-    // for (int i = 0; i < tcache->crt_size; i++) {
-    //     tcache_drop(tcache);
-    // }
+    int dsize = dcache->crt_size;
+    int psize = pcache->crt_size;
+    int tsize = tcache->crt_size;
+    for (int i = 0; i < dsize; i++) {
+        dcache_drop(dcache);
+    }
+    for (int i = 0; i < psize; i++) {
+        pcache_drop(pcache);
+    }
+    for (int i = 0; i < tsize; i++) {
+        tcache_drop(tcache);
+    }
 }
 
-
+// Get hash value
 u32 __intHash(u32 key, u32 size) {
     u32 mask = size - 1;
     return key & mask;
